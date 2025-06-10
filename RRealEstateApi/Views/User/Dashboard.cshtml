@@ -1,0 +1,36 @@
+﻿@using RRealEstateApi.ViewModels
+@model IEnumerable<DashboardViewModel>
+
+@{
+    ViewData["Title"] = "User Dashboard";
+}
+
+<h2>User Dashboard</h2>
+
+<!-- Sort Dropdown Form -->
+<form method="get" asp-action="Dashboard" class="mb-3">
+    <label for="sortOrder">Sort by:</label>
+    <select name="sortOrder" id="sortOrder" onchange="this.form.submit()" class="form-select w-auto d-inline-block mx-2">
+        <option value="">-- Select --</option>
+        <option value="title_asc">Title (A-Z)</option>
+        <option value="title_desc">Title (Z-A)</option>
+        <option value="price_asc">Price (Low to High)</option>
+        <option value="price_desc">Price (High to Low)</option>
+    </select>
+</form>
+
+<!-- Property Listings Loop -->
+@foreach (var item in Model)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">@item.Title</h5>
+            <h6 class="card-subtitle mb-2 text-muted">@item.Location</h6>
+            <p class="card-text">
+                <strong>Price:</strong> $@item.Price <br />
+                <strong>Agent:</strong> @item.AgentName <br />
+                <strong>Description:</strong> @item.Description
+            </p>
+        </div>
+    </div>
+}

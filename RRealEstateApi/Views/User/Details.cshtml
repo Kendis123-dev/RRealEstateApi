@@ -1,0 +1,13 @@
+﻿@using RRealEstateApi.Models
+@model Property
+
+<h2>@Model.Title</h2>
+
+<img src="@Model.ImageUrl" alt="Image" width="400" />
+<p><strong>Description:</strong> @Model.Description</p>
+<p><strong>Location:</strong> @Model.Location</p>
+<p><strong>Price:</strong> @Model.Price.ToString("C")</p>
+<p><strong>Posted on:</strong> @Model.DatePosted.ToShortDateString()</p>
+
+
+<a href="@Url.Action("Index", "User")">Back to Listings</a>

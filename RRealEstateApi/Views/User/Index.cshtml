@@ -1,0 +1,121 @@
+﻿@using RRealEstateApi.Models
+@model List<Property>
+@{
+    ViewData["Title"] = "Browse Properties";
+    var location = ViewData["CurrentLocation"] as string;
+    var minPrice = ViewData["CurrentMinPrice"] as decimal?;
+    var maxPrice = ViewData["CurrentMaxPrice"] as decimal?;
+    var sortOrder = ViewData["CurrentSort"] as string;
+    var currentPage = (int)ViewData["CurrentPage"];
+    var totalPages = (int)ViewData["TotalPages"];
+}
+
+<h2>Property Listings</h2>
+
+<!-- FILTER & SORT FORM -->
+<form method="get" asp-action="Index" class="form-inline mb-4">
+    <div>
+        <label>Location:</label>
+        <input type="text" name="location" value="@location" class="form-control" />
+    </div>
+
+    <div>
+        <label>Min Price:</label>
+        <input type="number" name="minPrice" value="@minPrice" class="form-control" />
+    </div>
+
+    <div>
+        <label>Max Price:</label>
+        <input type="number" name="maxPrice" value="@maxPrice" class="form-control" />
+    </div>
+
+    <div>
+        <label>Sort By:</label>
+        <select name="sortOrder" class="form-control">
+            <option value="">Newest</option>
+            <option value="price_asc" @(sortOrder == "price_asc" ? "selected" : "")>Price: Low to High</option>
+            <option value="price_desc" @(sortOrder == "price_desc" ? "selected" : "")>Price: High to Low</option>
+            <option value="date_asc" @(sortOrder == "date_asc" ? "selected" : "")>Date: Oldest</option>
+            <option value="date_desc" @(sortOrder == "date_desc" ? "selected" : "")>Date: Newest</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Apply</button>
+</form>
+
+<!-- PROPERTY LIST -->
+@if (!Model.Any())
+{
+    <p>No properties found.</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var property in Model)
+        {
+            <div class="col-md-4 mb-4">
+                <div class="card">
+                    <img src="@property.ImageUrl" class="card-img-top" alt="@property.Title" style="height:200px; object-fit:cover;" />
+                    <div class="card-body">
+                        <h5 class="card-title">@property.Title</h5>
+                        <p class="card-text">@property.Location</p>
+                        <p class="card-text">₦@property.Price.ToString("N0")</p>
+                        <p class="card-text"><small class="text-muted">Posted on @property.DatePosted.ToShortDateString()</small></p>
+                        <!-- View Details button linking to the Details action -->
+                        <a asp-action="Details" asp-route-id="@property.Id" class="btn btn-sm btn-outline-primary">View Details</a>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<!-- PAGINATION -->
+@if (totalPages > 1)
+{
+    <nav>
+        <ul class="pagination">
+            @if (currentPage > 1)
+            {
+                <li class="page-item">
+                    <a class="page-link"
+                       asp-route-page="@(currentPage - 1)"
+                       asp-route-location="@location"
+                       asp-route-minPrice="@minPrice"
+                       asp-route-maxPrice="@maxPrice"
+                       asp-route-sortOrder="@sortOrder">
+                        Previous
+                    </a>
+                </li>
+            }
+
+            @for (int i = 1; i <= totalPages; i++)
+            {
+                <li class="page-item @(i == currentPage ? "active" : "")">
+                    <a class="page-link"
+                       asp-route-page="@i"
+                       asp-route-location="@location"
+                       asp-route-minPrice="@minPrice"
+                       asp-route-maxPrice="@maxPrice"
+                       asp-route-sortOrder="@sortOrder">
+                        @i
+                    </a>
+                </li>
+            }
+
+            @if (currentPage < totalPages)
+            {
+                <li class="page-item">
+                    <a class="page-link"
+                       asp-route-page="@(currentPage + 1)"
+                       asp-route-location="@location"
+                       asp-route-minPrice="@minPrice"
+                       asp-route-maxPrice="@maxPrice"
+                       asp-route-sortOrder="@sortOrder">
+                        Next
+                    </a>
+                </li>
+            }
+        </ul>
+    </nav>
+}
