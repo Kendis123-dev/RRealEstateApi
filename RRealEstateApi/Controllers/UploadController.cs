@@ -59,21 +59,38 @@ public class UploadController : ControllerBase
     [HttpGet("image/{propertyId}")]
     public IActionResult GetPropertyImage(int propertyId)
     {
-        var propertyImage = _context.Properties.FirstOrDefault(p => p.Id == propertyId);
-        if (propertyImage == null || string.IsNullOrEmpty(propertyImage.ImageUrl))
+        var property = _context.Properties.FirstOrDefault(p => p.Id == propertyId);
+        if (property == null || string.IsNullOrWhiteSpace(property.ImageUrl))
         {
             return NotFound(new { message = "Property image not found" });
         }
 
-        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
-        var imagePath = propertyImage.ImageUrl;
+        // Get only the filename, drop any directory parts from DB
+        var fileName = Path.GetFileName(property.ImageUrl);
 
-        if (!System.IO.File.Exists(imagePath))
+        var uploadsDir = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
+        var filePath = Path.Combine(uploadsDir, fileName);
+
+        if (!System.IO.File.Exists(filePath))
         {
-            return NotFound(new { message = "Image file does not exist", path = imagePath });
+            return NotFound(new { message = "Image file does not exist", path = filePath });
         }
 
-        var imageFileStream = System.IO.File.OpenRead(imagePath);
-        return File(imageFileStream, "image/jpeg"); // Or use "image/png" if you save PNGs
+        var stream = System.IO.File.OpenRead(filePath);
+        var contentType = GetContentType(filePath);
+        return File(stream, contentType);
     }
+
+    private string GetContentType(string path)
+    {
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        return extension switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            _ => "application/octet-stream",
+        };
+    }
+
 }

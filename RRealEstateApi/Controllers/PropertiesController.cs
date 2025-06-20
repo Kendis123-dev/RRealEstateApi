@@ -89,17 +89,44 @@ namespace RRealEstateApi.Controllers
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> SearchProperties([FromQuery] string location)
+        public async Task<IActionResult> SearchProperties(
+     [FromQuery] string? location,
+     [FromQuery] int pageNumber = 1,
+     [FromQuery] int pageSize = 10)
         {
             if (string.IsNullOrWhiteSpace(location))
-                return BadRequest("Location is required");
+            {
+                location = "";
+            }
+                //return BadRequest("Location is required");
 
-            var properties = await _propertyService.SearchByLocationAsync(location);
-            if (properties == null || !properties.Any())
+            if (pageNumber <= 0 || pageSize <= 0)
+                return BadRequest("Page number and page size must be greater than zero");
+
+            var allProperties = await _propertyService.SearchByLocationAsync(location);
+            if (allProperties == null || !allProperties.Any())
                 return NotFound("No properties found in this location");
 
-            return Ok(properties);
+            var totalItems = allProperties.Count();
+            var totalPages = (int)Math.Ceiling(totalItems / (double)pageSize);
+
+            var paginatedProperties = allProperties
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            var result = new
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalPages = totalPages,
+                TotalItems = totalItems,
+                Data = paginatedProperties
+            };
+
+            return Ok(result);
         }
+
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, Property updated)
