@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using RRealEstateApi.DTOs;
@@ -9,6 +8,7 @@ using RRealEstateApi.Services.Implementations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace RRealEstateApi.Controllers
 {
@@ -38,46 +38,24 @@ namespace RRealEstateApi.Controllers
             _phoneService = phoneService;
         }
 
-        [HttpPost("register-agent")]
-        public async Task<IActionResult> RegisterAgent([FromBody] RegisterDto model)
-        {
-            if (await _userManager.FindByEmailAsync(model.Email) != null)
-                return BadRequest(new { message = "Agent already exists." });
-
-            var user = new ApplicationUser
-            {
-                UserName = model.Username,
-                Email = model.Email,
-                FullName = model.FullName,
-                PhoneNumber = model.PhoneNumber,
-                UserEmail = model.Email
-            };
-
-            var result = await _userManager.CreateAsync(user, model.Password);
-            if (!result.Succeeded)
-                return BadRequest(result.Errors);
-
-            if (!await _roleManager.RoleExistsAsync("Agent"))
-                await _roleManager.CreateAsync(new IdentityRole("Agent"));
-
-            await _userManager.AddToRoleAsync(user, "Agent");
-
-            return Ok(new { message = "Agent registered successfully." });
-        }
+        // REGISTRATION
 
         [HttpPost("register-admin")]
         public async Task<IActionResult> RegisterAdmin([FromBody] RegisterDto model)
         {
+            if (!IsValidEmail(model.Email))
+                return BadRequest(new { message = "Invalid email format" });
+
             if (await _userManager.FindByEmailAsync(model.Email) != null)
                 return BadRequest(new { message = "Admin already exists." });
 
             var user = new ApplicationUser
             {
                 UserName = model.Email,
-                FullName = model.FullName,
                 Email = model.Email,
+                FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
-                UserEmail = model.Email
+                EmailConfirmed = false
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -89,88 +67,43 @@ namespace RRealEstateApi.Controllers
 
             await _userManager.AddToRoleAsync(user, "Admin");
 
-            return Ok(new { message = "Admin registered successfully." });
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = $"{_config["Frontend:ConfirmEmailUrl"]}?email={user.Email}&token={token}";
+            await _emailService.SendEmailAsync(user.Email, "Confirm Your Email", $"<p>Click to confirm: <a href='{confirmationLink}'>Verify Email</a></p>");
+
+            return Ok(new { message = "Admin registered. Please check your email to confirm." });
         }
 
-        [HttpPost("register-User")]
-        public async Task<IActionResult> Register(UserRegisterDto model)
+        [HttpPost("register-user")]
+        public async Task<IActionResult> RegisterUser([FromBody] RegisterDto model)
         {
+            if (!IsValidEmail(model.Email))
+                return BadRequest(new { message = "Invalid email format" });
+
             if (await _userManager.FindByEmailAsync(model.Email) != null)
                 return BadRequest(new { message = "User already exists." });
 
             var user = new ApplicationUser
             {
-                UserName = model.UserName,
-                FullName = model.FullName,
+                UserName = model.Email,
                 Email = model.Email,
+                FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
-                UserEmail = model.Email
+                EmailConfirmed = false
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded)
                 return BadRequest(result.Errors);
 
-            return Ok(new { message = "User registered successfully." });
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = $"{_config["Frontend:ConfirmEmailUrl"]}?email={user.Email}&token={token}";
+            await _emailService.SendEmailAsync(user.Email, "Confirm Your Email", $"<p>Click to confirm: <a href='{confirmationLink}'>Verify Email</a></p>");
+
+            return Ok(new { message = "User registered. Please check your email to confirm." });
         }
 
-        [HttpPost("login-User")]
-        public async Task<IActionResult> Login(UserLoginDto model)
-        {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
-                return Unauthorized("Invalid login");
-
-            var roles = await _userManager.GetRolesAsync(user);
-            var token = GenerateToken(user, roles);
-
-            return Ok(new
-            {
-                token,
-                expiration = DateTime.UtcNow.AddDays(2),
-                roles
-            });
-        }
-
-        [HttpPost("login-admin")]
-        public async Task<IActionResult> LoginAdmin([FromBody] LoginDto model)
-        {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
-                return Unauthorized(new { message = "Invalid email or password" });
-
-            var roles = await _userManager.GetRolesAsync(user);
-            if (!roles.Contains("Admin"))
-                return Unauthorized(new { message = "Access denied. Not an admin." });
-
-            var token = GenerateToken(user, roles);
-            return Ok(new
-            {
-                token,
-                expiration = DateTime.UtcNow.AddDays(2),
-                roles
-            });
-        }
-
-        [HttpPost("login-agent")]
-        public async Task<IActionResult> LoginAgent([FromBody] LoginDto model)
-        {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
-                return Unauthorized(new { message = "Invalid email or password" });
-
-            var roles = await _userManager.GetRolesAsync(user);
-            if (!roles.Contains("Agent"))
-                return Unauthorized(new { message = "Access denied. Not an agent." });
-
-            var token = GenerateToken(user, roles);
-            return Ok(new
-            {
-                token,
-                expiration = DateTime.UtcNow.AddDays(2),
-                roles
-            });
-        }
+        // LOGIN INITIATE + 2FA
 
         [HttpPost("initiate-login")]
         public async Task<IActionResult> InitiateLogin([FromBody] LoginDto model)
@@ -179,14 +112,16 @@ namespace RRealEstateApi.Controllers
             if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
                 return Unauthorized(new { message = "Invalid credentials" });
 
-            if (string.IsNullOrEmpty(user.PhoneNumber))
-                return BadRequest(new { message = "Phone number not registered for 2FA." });
+            if (!user.EmailConfirmed)
+                return Unauthorized(new { message = "Please confirm your email before logging in." });
+
+            if (string.IsNullOrWhiteSpace(user.PhoneNumber))
+                return BadRequest(new { message = "Phone number is not registered." });
 
             var code = new Random().Next(100000, 999999).ToString();
             _login2FACodes[user.Email] = code;
 
-            var smsMessage = $"Your 2FA code is: {code}";
-            await _phoneService.SendSmsAsync(user.PhoneNumber, smsMessage);
+            await _phoneService.SendSmsAsync(user.PhoneNumber, $"Your 2FA code is: {code}");
 
             return Ok(new { message = "2FA code sent to your phone." });
         }
@@ -214,6 +149,41 @@ namespace RRealEstateApi.Controllers
             });
         }
 
+        // EMAIL CONFIRMATION
+
+        [HttpPost("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                return BadRequest(new { message = "User not found." });
+
+            var result = await _userManager.ConfirmEmailAsync(user, model.Token);
+            if (!result.Succeeded)
+                return BadRequest(new { message = "Email confirmation failed.", errors = result.Errors });
+
+            return Ok(new { message = "Email confirmed successfully." });
+        }
+
+        [HttpPost("resend-confirmation")]
+        public async Task<IActionResult> ResendConfirmation([FromBody] EmailDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                return BadRequest(new { message = "User not found." });
+
+            if (user.EmailConfirmed)
+                return BadRequest(new { message = "Email already confirmed." });
+
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var confirmationLink = $"{_config["Frontend:ConfirmEmailUrl"]}?email={user.Email}&token={token}";
+            await _emailService.SendEmailAsync(user.Email, "Resend Email Confirmation", $"<p>Click to confirm: <a href='{confirmationLink}'>Verify Email</a></p>");
+
+            return Ok(new { message = "Confirmation email resent." });
+        }
+
+        // PASSWORD RESET
+
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
         {
@@ -225,11 +195,9 @@ namespace RRealEstateApi.Controllers
             var encodedToken = System.Web.HttpUtility.UrlEncode(token);
             var resetLink = $"{_config["Frontend:ResetPasswordUrl"]}?email={model.Email}&token={encodedToken}";
 
-            var emailBody = $"<p>Hi {user.FullName},</p><p>Click the link below to reset your password:</p><p><a href='{resetLink}'>Reset Password</a></p>";
+            await _emailService.SendEmailAsync(model.Email, "Password Reset", $"<p>Reset your password: <a href='{resetLink}'>Reset</a></p>");
 
-            await _emailService.SendEmailAsync(model.Email, "Password Reset Request", emailBody);
-
-            return Ok(new { message = "Password reset link has been sent to your email." });
+            return Ok(new { message = "Password reset link sent." });
         }
 
         [HttpPost("reset-password")]
@@ -243,8 +211,10 @@ namespace RRealEstateApi.Controllers
             if (!result.Succeeded)
                 return BadRequest(new { message = "Password reset failed.", errors = result.Errors });
 
-            return Ok(new { message = "Password has been reset successfully." });
+            return Ok(new { message = "Password reset successfully." });
         }
+
+        // TOKEN GENERATION
 
         private string GenerateToken(ApplicationUser user, IList<string> roles)
         {
@@ -261,15 +231,22 @@ namespace RRealEstateApi.Controllers
             }
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_config["Jwt:Key"]));
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
             var token = new JwtSecurityToken(
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
                 expires: DateTime.UtcNow.AddDays(2),
-                signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256)
+                signingCredentials: creds
             );
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        private bool IsValidEmail(string email)
+        {
+            return Regex.IsMatch(email, @"^[^@\s]+@[^@\s]+\.[^@\s]+$");
         }
     }
 }

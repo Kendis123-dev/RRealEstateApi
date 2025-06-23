@@ -1,5 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using RRealEstateApi.Data;
 using RRealEstateApi.DTOs;
 using RRealEstateApi.Models;
@@ -35,45 +35,49 @@ public class UploadController : ControllerBase
         var uploadsDir = Path.Combine(_env.WebRootPath ?? "wwwroot", "uploads");
         if (!Directory.Exists(uploadsDir)) Directory.CreateDirectory(uploadsDir);
 
-        var fileName = Guid.NewGuid().ToString() + ext;
+        var fileName = Guid.NewGuid() + ext;
         var filePath = Path.Combine(uploadsDir, fileName);
+        var fileUrl = $"/uploads/{fileName}"; // This is the relative URL to be used
 
         using (var stream = new FileStream(filePath, FileMode.Create))
         {
             await file.CopyToAsync(stream);
         }
 
+        // Save file info in a separate image table
         var image = new PropertyImage
         {
             PropertyId = dto.PropertyId,
             FileName = fileName,
-            FileUrl = $"/uploads/{fileName}"
+            FileUrl = fileUrl
         };
-        property.ImageUrl = filePath;
+
+        // Save relative URL in main Property record
+        property.ImageUrl = fileUrl;
+
         _context.PropertyImages.Add(image);
         await _context.SaveChangesAsync();
 
-        return Ok(new { message = "Upload successful", imageUrl = image.FileUrl });
+        return Ok(new { message = "Upload successful", imageUrl = fileUrl });
     }
 
     [HttpGet("image/{propertyId}")]
     public IActionResult GetPropertyImage(int propertyId)
     {
-        var propertyImage = _context.Properties.FirstOrDefault(p => p.Id == propertyId);
-        if (propertyImage == null || string.IsNullOrEmpty(propertyImage.ImageUrl))
-        {
+        var property = _context.Properties.FirstOrDefault(p => p.Id == propertyId);
+        if (property == null || string.IsNullOrEmpty(property.ImageUrl))
             return NotFound(new { message = "Property image not found" });
-        }
 
-        var uploadsFolder = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
-        var imagePath = propertyImage.ImageUrl;
+        // Construct the full path from the relative URL
+        var imagePath = Path.Combine(_env.WebRootPath ?? "wwwroot", property.ImageUrl.TrimStart('/'));
 
         if (!System.IO.File.Exists(imagePath))
         {
             return NotFound(new { message = "Image file does not exist", path = imagePath });
         }
 
-        var imageFileStream = System.IO.File.OpenRead(imagePath);
-        return File(imageFileStream, "image/jpeg"); // Or use "image/png" if you save PNGs
+        var imageStream = System.IO.File.OpenRead(imagePath);
+        var mimeType = "image/jpeg"; // You could enhance this by detecting type from extension
+        return File(imageStream, mimeType);
     }
 }

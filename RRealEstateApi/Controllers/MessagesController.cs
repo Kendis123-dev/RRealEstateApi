@@ -51,7 +51,7 @@ public class MessagesController : ControllerBase
         var messagesQuery = _context.Messages
             .Where(m => m.Agent == agent.Id)
             .Include(m => m.User)
-            .OrderByDescending(m => m.DateSent); // Optional: order by latest
+            .OrderByDescending(m => m.DateSent); 
 
         var totalCount = await messagesQuery.CountAsync();
         var messages = await messagesQuery
