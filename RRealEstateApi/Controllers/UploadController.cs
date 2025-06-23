@@ -64,13 +64,13 @@ public class UploadController : ControllerBase
     [HttpGet("image/{propertyId}")]
     public IActionResult GetPropertyImage(int propertyId)
     {
-        var property = _context.Properties.FirstOrDefault(p => p.Id == propertyId);
-        if (property == null || string.IsNullOrEmpty(property.ImageUrl))
+        //var property = _context.Properties.FirstOrDefault(p => p.Id == propertyId);
+        //if (property == null || string.IsNullOrEmpty(property.ImageUrl))
         var property = _context.Properties.FirstOrDefault(p => p.Id == propertyId);
         if (property == null || string.IsNullOrWhiteSpace(property.ImageUrl))
         {
             return NotFound(new { message = "Property image not found" });
-
+        }
         // Construct the full path from the relative URL
         var imagePath = Path.Combine(_env.WebRootPath ?? "wwwroot", property.ImageUrl.TrimStart('/'));
         // Get only the filename, drop any directory parts from DB
@@ -89,9 +89,9 @@ public class UploadController : ControllerBase
         return File(stream, contentType);
     }
 
-        var imageStream = System.IO.File.OpenRead(imagePath);
-        var mimeType = "image/jpeg"; // You could enhance this by detecting type from extension
-        return File(imageStream, mimeType);
+        //var imageStream = System.IO.File.OpenRead(imagePath);
+        //var mimeType = "image/jpeg"; // You could enhance this by detecting type from extension
+        //return File(imageStream, mimeType);
     private string GetContentType(string path)
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();
@@ -105,4 +105,3 @@ public class UploadController : ControllerBase
     }
 }
 
-}
