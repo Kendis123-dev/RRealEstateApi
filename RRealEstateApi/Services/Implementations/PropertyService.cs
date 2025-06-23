@@ -26,6 +26,8 @@ namespace RRealEstateApi.Services.Implementations
                 Title = p.Title,
                 Description = p.Description,
                 Location = p.Location,
+                ImageUrl= p.ImageUrl,
+                State= p.State,
                 Price = p.Price,
                 
             });
