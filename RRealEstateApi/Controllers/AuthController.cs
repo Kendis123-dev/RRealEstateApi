@@ -178,7 +178,7 @@ namespace RRealEstateApi.Controllers
             var code = new Random().Next(100000, 999999).ToString();
             _login2FACodes[user.Email] = code;
 
-            await _phoneService.SendSmsAsync(user.PhoneNumber, $"Your 2FA code is: {code}");
+            await SendEmail2fa(user, code);
 
             return Ok(new { message = "2FA code sent to your phone." });
         }
@@ -201,7 +201,8 @@ namespace RRealEstateApi.Controllers
             {
                 token,
                 expiration = DateTime.UtcNow.AddDays(2),
-                roles
+                roles,
+                user
             });
         }
 
@@ -239,6 +240,14 @@ namespace RRealEstateApi.Controllers
             var encoded = WebUtility.UrlEncode(token);
             var link = $"{_config["Frontend:ConfirmEmailUrl"]}http://localhost:5173/confirm-email?email={user.Email}&token={encoded}";
             var body = $"<p>Click to verify your email: <a href='{link}'>Confirm Email</a></p>";
+            await _emailService.SendEmailAsync(user.Email, "Confirm Your Email", body);
+        }
+        private async Task SendEmail2fa(ApplicationUser user,string code)
+        {
+
+            
+            //var link = $"{_config["Frontend:ConfirmEmailUrl"]}http://localhost:5173/confirm-email?email={user.Email}&token={encoded}";
+            var body = $"<p>Your 2FA code is : <strong>{code}</strong></p>";
             await _emailService.SendEmailAsync(user.Email, "Confirm Your Email", body);
         }
 
