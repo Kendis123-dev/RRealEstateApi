@@ -43,13 +43,11 @@ public class MessagesController : ControllerBase
     [HttpGet("received")]
     public async Task<IActionResult> GetAgentMessages(string email, int pageNumber = 1, int pageSize = 10)
     {
-        var agent = await _context.Agents
-                            .Include(a => a.Users)
-                            .FirstOrDefaultAsync(a => a.Email == email);
+        var agent = await _context.Users.FirstOrDefaultAsync(a => a.Email == email);
         if (agent == null) return NotFound("Agent not found");
 
         var messagesQuery = _context.Messages
-            .Where(m => m.Agent == agent.Id)
+            .Where(m => m.UserId == agent.Id)
             .Include(m => m.User)
             .OrderByDescending(m => m.DateSent); 
 
