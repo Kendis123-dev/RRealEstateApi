@@ -53,6 +53,7 @@ namespace RRealEstateApi.Controllers
             var user = new ApplicationUser
             {
                 UserName = model.Email,
+                UserEmail = model.Email,
                 Email = model.Email,
                 FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
@@ -82,6 +83,7 @@ namespace RRealEstateApi.Controllers
             var user = new ApplicationUser
             {
                 UserName = model.Email,
+                UserEmail = model.Email,
                 Email = model.Email,
                 FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
