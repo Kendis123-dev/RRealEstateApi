@@ -10,6 +10,6 @@
         public ApplicationUser User { get; set; }
         public string content {  get; set; }
         public DateTime DateSent { get; set; }
-        public int Agent { get; internal set; }
+        public int Agent { get;  set; }
     }
 }
