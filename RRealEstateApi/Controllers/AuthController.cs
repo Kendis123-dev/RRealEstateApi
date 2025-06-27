@@ -93,6 +93,7 @@ namespace RRealEstateApi.Controllers
                 PhoneNumber = model.PhoneNumber,
                 EmailConfirmed = false
             };
+            
 
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
@@ -129,9 +130,10 @@ namespace RRealEstateApi.Controllers
                 RegisteredAt=user.CreatedAt,
                 IsVerified=false
             };
+            
             _context.Agents.Add(agent);
             await _context.SaveChangesAsync();
-
+user.AgentId = agent.Id;
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
 
