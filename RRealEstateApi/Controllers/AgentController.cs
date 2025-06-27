@@ -58,29 +58,29 @@ public class AgentController : ControllerBase
         return agent;
     }
 
-    [HttpPost]
-    public async Task<ActionResult<Agent>> CreateAgent(AgentDto agent)
-    {
-        var existing = await _context.Agents.FirstOrDefaultAsync(u => u.Email == agent.Email);
-        if (existing != null) return BadRequest("Email already exists");
+    //[HttpPost]
+    //public async Task<ActionResult<Agent>> CreateAgent(AgentDto agent)
+    //{
+    //    var existing = await _context.Agents.FirstOrDefaultAsync(u => u.Email == agent.Email);
+    //    if (existing != null) return BadRequest("Email already exists");
 
-        var newAgent = new Agent
-        {
-            Id = agent.Id,
-            FullName = agent.FullName,
-            Email = agent.Email,
-            AgencyName = agent.AgencyName,
-            RegisteredAt = agent.RegisteredAt,
-            PhoneNumber = agent.PhoneNumber
-        };
+    //    var newAgent = new Agent
+    //    {
+    //        Id = agent.Id,
+    //        FullName = agent.FullName,
+    //        Email = agent.Email,
+    //        AgencyName = agent.AgencyName,
+    //        RegisteredAt = agent.RegisteredAt,
+    //        PhoneNumber = agent.PhoneNumber
+    //    };
 
-        newAgent.Password = GeneratePassword(agent.Password);
+    //    newAgent.Password = GeneratePassword(agent.Password);
 
-        _context.Agents.Add(newAgent);
-        await _context.SaveChangesAsync();
+    //    _context.Agents.Add(newAgent);
+    //    await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetAgent), new { id = newAgent.Id }, newAgent);
-    }
+    //    return CreatedAtAction(nameof(GetAgent), new { id = newAgent.Id }, newAgent);
+    //}
 
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateAgent(int id, Agent agent)
@@ -104,4 +104,19 @@ public class AgentController : ControllerBase
 
         return NoContent();
     }
+
+    [HttpGet("{agentId}/properties")]
+    [Authorize(Roles = "Agent")]
+    public async Task<IActionResult> GetAgentProperties(int agentId)
+    {
+        if (agentId <= 0)
+            return BadRequest(new { message = "Invalid Agent ID." });
+
+        var properties = await _context.Properties
+            .Where(p => p.AgentId == agentId)
+            .ToListAsync();
+
+        return Ok(properties);
+    }
+
 }

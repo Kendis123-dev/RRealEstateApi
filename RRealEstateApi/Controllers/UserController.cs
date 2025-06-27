@@ -20,13 +20,13 @@ namespace RRealEstateApi.Controllers
 
         // GET: api/User/paginated?page=1&pageSize=10
         [HttpGet("paginated")]
-        public async Task<IActionResult> GetUsers(int page = 1, int pageSize = 10)
+        public async Task<IActionResult> GetUsers([FromQuery]string? UserId, int page = 1, int pageSize = 10)
         {
             if (page <= 0 || pageSize <= 0)
                 return BadRequest("Page and PageSize must be greater than 0.");
 
             var query = _context.Users.AsQueryable();
-
+            if (!string.IsNullOrWhiteSpace(UserId)) query=query.Where(b=>b.Id==UserId);
             var totalUsers = await query.CountAsync();
             var totalPages = (int)Math.Ceiling(totalUsers / (double)pageSize);
 

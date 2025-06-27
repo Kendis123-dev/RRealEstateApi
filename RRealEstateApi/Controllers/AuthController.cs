@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using RRealEstateApi.Data;
 using RRealEstateApi.DTOs;
 using RRealEstateApi.Models;
 using RRealEstateApi.Services;
@@ -23,17 +25,19 @@ namespace RRealEstateApi.Controllers
         private readonly IConfiguration _config;
         private readonly IEmailService _emailService;
         private readonly IPhoneService _phoneService;
-
+        private readonly RealEstateDbContext _context;
         private static readonly Dictionary<string, string> _login2FACodes = new();
 
         public AuthController(
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
+            RealEstateDbContext context,
             IConfiguration config,
             IEmailService emailService,
             IPhoneService phoneService)
         {
             _userManager = userManager;
+            _context = context;
             _roleManager = roleManager;
             _config = config;
             _emailService = emailService;
@@ -116,6 +120,17 @@ namespace RRealEstateApi.Controllers
                 PhoneNumber = model.PhoneNumber,
                 EmailConfirmed = false
             };
+            var agent = new Agent
+            {
+                FullName = model.FullName,
+                Email = user.Email,
+                Aspuserid=user.Id,
+                PhoneNumber = model.PhoneNumber,
+                RegisteredAt=user.CreatedAt,
+                IsVerified=false
+            };
+            _context.Agents.Add(agent);
+            await _context.SaveChangesAsync();
 
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
