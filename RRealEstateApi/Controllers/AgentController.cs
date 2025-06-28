@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using RRealEstateApi.Data;
@@ -122,7 +123,11 @@ public class AgentController : ControllerBase
 
     [HttpGet("{agentId}/properties")]
     [Authorize(Roles = "Agent")]
+<<<<<<< HEAD
     public async Task<IActionResult> GetAgentProperties(int agentId,[FromQuery] int pageNumber = 1,[FromQuery] int pageSize = 10)
+=======
+    public async Task<IActionResult> GetAgentProperties(int agentId,string location)
+>>>>>>> ff2ed6847dab2b4d45e69e80bef25cb4038a0089
     {
         if (agentId <= 0)
             return BadRequest(new { message = "Invalid Agent ID." });
@@ -138,7 +143,10 @@ public class AgentController : ControllerBase
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
+        var prop = properties.AsQueryable();
+        if(!string.IsNullOrWhiteSpace(location)) prop = prop.Where(b => b.Location == location);
 
+<<<<<<< HEAD
         var response = new
         {
             PageNumber = pageNumber,
@@ -149,6 +157,9 @@ public class AgentController : ControllerBase
         };
 
         return Ok(response);
+=======
+        return Ok(prop);
+>>>>>>> ff2ed6847dab2b4d45e69e80bef25cb4038a0089
     }
 
 }

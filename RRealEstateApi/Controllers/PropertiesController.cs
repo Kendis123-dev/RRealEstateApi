@@ -74,7 +74,7 @@ namespace RRealEstateApi.Controllers
             {
                 Title = property.Title,
                 Description = property.Description,
-                Location = property.Location,
+                Location = property.Location,State=property.State,
                 Price = property.Price,
                 ImageUrl = property.ImageUrl,
                 PropertyType = property.PropertyType,
