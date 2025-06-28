@@ -133,11 +133,9 @@ namespace RRealEstateApi.Controllers
             
             _context.Agents.Add(agent);
             await _context.SaveChangesAsync();
-<<<<<<< HEAD
+
             user.AgentId = agent.Id;
-=======
-user.AgentId = agent.Id;
->>>>>>> ff2ed6847dab2b4d45e69e80bef25cb4038a0089
+
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
 

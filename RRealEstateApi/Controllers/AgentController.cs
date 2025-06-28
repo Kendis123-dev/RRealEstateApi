@@ -123,11 +123,7 @@ public class AgentController : ControllerBase
 
     [HttpGet("{agentId}/properties")]
     [Authorize(Roles = "Agent")]
-<<<<<<< HEAD
-    public async Task<IActionResult> GetAgentProperties(int agentId,[FromQuery] int pageNumber = 1,[FromQuery] int pageSize = 10)
-=======
-    public async Task<IActionResult> GetAgentProperties(int agentId,string location)
->>>>>>> ff2ed6847dab2b4d45e69e80bef25cb4038a0089
+    public async Task<IActionResult> GetAgentProperties(int agentId, [FromQuery] string? location, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         if (agentId <= 0)
             return BadRequest(new { message = "Invalid Agent ID." });
@@ -135,18 +131,18 @@ public class AgentController : ControllerBase
         if (pageNumber <= 0 || pageSize <= 0)
             return BadRequest(new { message = "Page number and page size must be greater than 0." });
 
-        var query = _context.Properties
+        var query = _context.Properties.AsQueryable()
             .Where(p => p.AgentId == agentId);
+
+        if (!string.IsNullOrWhiteSpace(location))
+            query = query.Where(p => p.Location == location);
 
         var totalRecords = await query.CountAsync();
         var properties = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
-        var prop = properties.AsQueryable();
-        if(!string.IsNullOrWhiteSpace(location)) prop = prop.Where(b => b.Location == location);
 
-<<<<<<< HEAD
         var response = new
         {
             PageNumber = pageNumber,
@@ -157,9 +153,7 @@ public class AgentController : ControllerBase
         };
 
         return Ok(response);
-=======
-        return Ok(prop);
->>>>>>> ff2ed6847dab2b4d45e69e80bef25cb4038a0089
     }
+
 
 }
