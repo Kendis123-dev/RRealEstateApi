@@ -105,18 +105,50 @@ public class AgentController : ControllerBase
         return NoContent();
     }
 
+    //[HttpGet("{agentId}/properties")]
+    //[Authorize(Roles = "Agent")]
+    //public async Task<IActionResult> GetAgentProperties(int agentId)
+    //{
+    //    if (agentId <= 0)
+    //        return BadRequest(new { message = "Invalid Agent ID." });
+
+    //    var properties = await _context.Properties
+    //        .Where(p => p.AgentId == agentId)
+    //        .ToListAsync();
+
+    //    return Ok(properties);
+    //}
+
+
     [HttpGet("{agentId}/properties")]
     [Authorize(Roles = "Agent")]
-    public async Task<IActionResult> GetAgentProperties(int agentId)
+    public async Task<IActionResult> GetAgentProperties(int agentId,[FromQuery] int pageNumber = 1,[FromQuery] int pageSize = 10)
     {
         if (agentId <= 0)
             return BadRequest(new { message = "Invalid Agent ID." });
 
-        var properties = await _context.Properties
-            .Where(p => p.AgentId == agentId)
+        if (pageNumber <= 0 || pageSize <= 0)
+            return BadRequest(new { message = "Page number and page size must be greater than 0." });
+
+        var query = _context.Properties
+            .Where(p => p.AgentId == agentId);
+
+        var totalRecords = await query.CountAsync();
+        var properties = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
-        return Ok(properties);
+        var response = new
+        {
+            PageNumber = pageNumber,
+            PageSize = pageSize,
+            TotalRecords = totalRecords,
+            TotalPages = (int)Math.Ceiling((double)totalRecords / pageSize),
+            Data = properties
+        };
+
+        return Ok(response);
     }
 
 }
