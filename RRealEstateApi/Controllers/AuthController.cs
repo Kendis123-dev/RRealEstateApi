@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -287,6 +288,39 @@ namespace RRealEstateApi.Controllers
 
             await _emailService.SendEmailAsync(model.Email, "Reset Password", $"<p><a href='{link}'>Reset</a></p>");
             return Ok(new { message = "Reset link sent." });
+        }
+
+        [HttpDelete("delete-account")]
+        [Authorize]
+        public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { message = "User not found or already deleted." });
+
+            var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
+            if (!isPasswordValid)
+                return BadRequest(new { message = "Invalid password." });
+
+            var email = user.Email;
+            var fullName = user.FullName;
+
+            var result = await _userManager.DeleteAsync(user);
+            if (!result.Succeeded)
+                return StatusCode(500, new { message = "Failed to delete account.", errors = result.Errors });
+
+            // Send Email Notification after account deletion
+            var subject = "Account Deleted";
+            var body = $@"
+        <p>Dear {fullName},</p>
+        <p>Your account associated with this email <strong>{email}</strong> has been deleted successfully.</p>
+        <p>If this wasn't you or you have any questions, please contact our support team.</p>
+        <br/>
+        <p>Thank you,<br/>The Real Estate Team</p>";
+
+            await _emailService.SendEmailAsync(email, subject, body);
+
+            return Ok(new { message = "Account deleted and email notification sent." });
         }
 
         [HttpPost("reset-password")]
