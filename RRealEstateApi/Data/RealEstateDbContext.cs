@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using RRealEstateApi.Controllers;
 using RRealEstateApi.Models;
@@ -21,34 +19,26 @@ namespace RRealEstateApi.Data
         public DbSet<Listing> Listings { get; set; }
         public DbSet<WatchlistItem> WatchlistItems { get; set; }
         public DbSet<Notification> Notifications { get; set; }
-
-        // ✅ Correct declaration
         public DbSet<PropertyImage> PropertyImages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
+            //  Cascade delete: When a user is deleted, their messages go too
             modelBuilder.Entity<Message>()
                 .HasOne(m => m.User)
                 .WithMany()
                 .HasForeignKey(m => m.UserId)
-                .OnDelete(DeleteBehavior.Restrict);
+                .OnDelete(DeleteBehavior.Cascade);
 
             modelBuilder.Entity<Message>()
                 .HasOne(m => m.Property)
                 .WithMany()
+                .HasForeignKey(m => m.PropertyId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            modelBuilder.Entity<WatchlistItem>(entity =>
-                entity.HasIndex(w => new { w.UserId, w.PropertyId }).IsUnique());
-
-            modelBuilder.Entity<Listing>()
-                .HasOne(l => l.Property)
-                .WithMany()
-                .HasForeignKey(l => l.PropertyId)
-                .OnDelete(DeleteBehavior.Cascade);
-
+            //  Cascade delete for watchlist
             modelBuilder.Entity<WatchlistItem>()
                 .HasOne(w => w.User)
                 .WithMany()
@@ -59,6 +49,38 @@ namespace RRealEstateApi.Data
                 .HasOne(w => w.Property)
                 .WithMany()
                 .HasForeignKey(w => w.PropertyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            //  Cascade delete for transaction if user is deleted
+            modelBuilder.Entity<Transaction>()
+                .HasOne(t => t.Buyer)
+                .WithMany()
+                .HasForeignKey(t => t.BuyerId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Transaction>()
+                .HasOne(t => t.Property)
+                .WithMany()
+                .HasForeignKey(t => t.PropertyId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            //  Cascade delete for notifications
+            modelBuilder.Entity<Notification>()
+                .HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Optional: Unique constraint for watchlist
+            modelBuilder.Entity<WatchlistItem>()
+                .HasIndex(w => new { w.UserId, w.PropertyId })
+                .IsUnique();
+
+            // Cascade for Listing to Property
+            modelBuilder.Entity<Listing>()
+                .HasOne(l => l.Property)
+                .WithMany()
+                .HasForeignKey(l => l.PropertyId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

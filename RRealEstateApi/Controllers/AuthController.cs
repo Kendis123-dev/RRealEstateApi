@@ -305,22 +305,32 @@ namespace RRealEstateApi.Controllers
             var email = user.Email;
             var fullName = user.FullName;
 
-            var result = await _userManager.DeleteAsync(user);
-            if (!result.Succeeded)
-                return StatusCode(500, new { message = "Failed to delete account.", errors = result.Errors });
+            try
+            {
+                // With cascade delete configured, just delete the user
+                var result = await _userManager.DeleteAsync(user);
+                if (!result.Succeeded)
+                {
+                    return StatusCode(500, new { message = "Failed to delete account.", errors = result.Errors });
+                }
 
-            // Send Email Notification after account deletion
-            var subject = "Account Deleted";
-            var body = $@"
-        <p>Dear {fullName},</p>
-        <p>Your account associated with this email <strong>{email}</strong> has been deleted successfully.</p>
-        <p>If this wasn't you or you have any questions, please contact our support team.</p>
-        <br/>
-        <p>Thank you,<br/>The Real Estate Team</p>";
+                // 📩 Email notification
+                var subject = "Account Deleted";
+                var body = $@"
+            <p>Dear {fullName},</p>
+            <p>Your account associated with this email <strong>{email}</strong> has been deleted successfully.</p>
+            <p>If this wasn't you or you have any questions, please contact our support team.</p>
+            <br/>
+            <p>Thank you,<br/>The Real Estate Team</p>";
 
-            await _emailService.SendEmailAsync(email, subject, body);
+                await _emailService.SendEmailAsync(email, subject, body);
 
-            return Ok(new { message = "Account deleted and email notification sent." });
+                return Ok(new { message = "Account deleted and email notification sent." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while deleting the account.", error = ex.Message });
+            }
         }
 
         [HttpPost("reset-password")]
