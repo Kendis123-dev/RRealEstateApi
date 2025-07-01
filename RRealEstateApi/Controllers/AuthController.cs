@@ -182,7 +182,7 @@ namespace RRealEstateApi.Controllers
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
-                return Unauthorized(new { message = "Invalid login." });
+                return Unauthorized(new { message = "Invalid credentials." });
 
             if (!await _userManager.IsInRoleAsync(user, "Agent"))
                 return Unauthorized(new { message = "Not an agent." });

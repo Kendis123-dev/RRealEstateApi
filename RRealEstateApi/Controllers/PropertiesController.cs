@@ -89,10 +89,7 @@ namespace RRealEstateApi.Controllers
         }
 
         [HttpGet("search")]
-        public async Task<IActionResult> SearchProperties(
-     [FromQuery] string? location,
-     [FromQuery] int pageNumber = 1,
-     [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> SearchProperties( [FromQuery] string? location, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
             if (string.IsNullOrWhiteSpace(location))
             {
