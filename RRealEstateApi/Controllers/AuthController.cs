@@ -14,6 +14,7 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Web;
+using static System.Net.WebRequestMethods;
 
 namespace RRealEstateApi.Controllers
 {
@@ -283,12 +284,24 @@ namespace RRealEstateApi.Controllers
             if (user == null) return BadRequest(new { message = "User not found." });
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var encoded = System.Web.HttpUtility.UrlEncode(token);
-            var link = $"{_config["Frontend:ResetPasswordUrl"]}?email={model.Email}&token={encoded}";
+            var encodedToken = System.Web.HttpUtility.UrlEncode(token);
 
-            await _emailService.SendEmailAsync(model.Email, "Reset Password", $"<p><a href='{link}'>Reset</a></p>");
+            //  Access the value from your config
+            var resetUrl = _config["http://localhost:5173/forgot-password/create-new-password"];
+            //var link = $"{resetUrl}?email={model.Email}&token={encodedToken}";
+            var link = $"{resetUrl}";
+
+            // Send the email
+            await _emailService.SendEmailAsync(model.Email, "Reset Password", $@"
+        <p>Click below to reset your password:</p>
+        <p><a href='http://localhost:5173/forgot-password/create-new-password'>Reset Password</a></p>
+        <p>If the link doesn't work, copy and paste this in your browser:</p>
+        <p>http://localhost:5173/forgot-password/create-new-password</p>
+    ");
+
             return Ok(new { message = "Reset link sent." });
         }
+
 
         [HttpDelete("delete-account")]
         [Authorize]
@@ -314,7 +327,7 @@ namespace RRealEstateApi.Controllers
                     return StatusCode(500, new { message = "Failed to delete account.", errors = result.Errors });
                 }
 
-                // 📩 Email notification
+                // Email notification
                 var subject = "Account Deleted";
                 var body = $@"
             <p>Dear {fullName},</p>
