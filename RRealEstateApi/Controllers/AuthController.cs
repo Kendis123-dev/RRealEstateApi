@@ -368,19 +368,22 @@ namespace RRealEstateApi.Controllers
                 return StatusCode(500, new { message = "An error occurred while deleting the account.", error = ex.Message });
             }
         }
-
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null) return BadRequest(new { message = "User not found." });
+            if (user == null)
+                return BadRequest(new { message = "User not found." });
 
-            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
+            // This method checks the old password and sets the new one
+            var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
+
             if (!result.Succeeded)
                 return BadRequest(new { message = "Reset failed.", errors = result.Errors });
 
-            return Ok(new { message = "Password reset." });
+            return Ok(new { message = "Password changed successfully." });
         }
+
 
         // HELPERS 
 
