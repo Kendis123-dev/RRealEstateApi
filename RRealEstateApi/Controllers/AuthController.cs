@@ -302,6 +302,29 @@ namespace RRealEstateApi.Controllers
             return Ok(new { message = "Reset link sent." });
         }
 
+        [HttpPost("update-change-password")]
+        public async Task<IActionResult> ManualPasswordUpdate([FromBody] UpdateChangePasswordDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            // Hash new password manually
+            var hashedPassword = _userManager.PasswordHasher.HashPassword(user, model.NewPassword);
+
+            // Update the password hash directly
+            user.PasswordHash = hashedPassword;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                return BadRequest(new { message = "Password update failed.", errors = result.Errors });
+
+            return Ok(new { message = "Password updated successfully." });
+        }
+
 
         [HttpDelete("delete-account")]
         [Authorize]
