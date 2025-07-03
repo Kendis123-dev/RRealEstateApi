@@ -13,8 +13,6 @@ using System.Net;
 using System.Security.Claims;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Web;
-using static System.Net.WebRequestMethods;
 
 namespace RRealEstateApi.Controllers
 {
@@ -22,6 +20,7 @@ namespace RRealEstateApi.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
+        private readonly IWebHostEnvironment _env;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<IdentityRole> _roleManager;
         private readonly IConfiguration _config;
@@ -31,6 +30,7 @@ namespace RRealEstateApi.Controllers
         private static readonly Dictionary<string, string> _login2FACodes = new();
 
         public AuthController(
+            IWebHostEnvironment env,
             UserManager<ApplicationUser> userManager,
             RoleManager<IdentityRole> roleManager,
             RealEstateDbContext context,
@@ -38,6 +38,7 @@ namespace RRealEstateApi.Controllers
             IEmailService emailService,
             IPhoneService phoneService)
         {
+            _env = env;
             _userManager = userManager;
             _context = context;
             _roleManager = roleManager;
@@ -45,8 +46,6 @@ namespace RRealEstateApi.Controllers
             _emailService = emailService;
             _phoneService = phoneService;
         }
-
-        // Registrtion
 
         [HttpPost("register-admin")]
         public async Task<IActionResult> RegisterAdmin([FromBody] RegisterDto model)
@@ -95,7 +94,6 @@ namespace RRealEstateApi.Controllers
                 PhoneNumber = model.PhoneNumber,
                 EmailConfirmed = false
             };
-            
 
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
@@ -123,16 +121,17 @@ namespace RRealEstateApi.Controllers
                 PhoneNumber = model.PhoneNumber,
                 EmailConfirmed = false
             };
+
             var agent = new Agent
             {
                 FullName = model.FullName,
                 Email = user.Email,
-                Aspuserid=user.Id,
+                Aspuserid = user.Id,
                 PhoneNumber = model.PhoneNumber,
-                RegisteredAt=user.CreatedAt,
-                IsVerified=false
+                RegisteredAt = user.CreatedAt,
+                IsVerified = false
             };
-            
+
             _context.Agents.Add(agent);
             await _context.SaveChangesAsync();
 
@@ -149,8 +148,6 @@ namespace RRealEstateApi.Controllers
             await SendEmailConfirmationLink(user);
             return Ok(new { message = "Agent registered. Please confirm your email." });
         }
-
-        //LOGIN INITIATE 
 
         [HttpPost("login-admin")]
         public async Task<IActionResult> LoginAdmin([FromBody] LoginDto model)
@@ -210,27 +207,129 @@ namespace RRealEstateApi.Controllers
         [HttpPost("verify-2fa")]
         public async Task<IActionResult> Verify2FA([FromBody] TwoFactorDto model)
         {
+            // Check if the provided 2FA code matches the stored code
             if (!_login2FACodes.TryGetValue(model.Email, out var code) || code != model.Code)
                 return Unauthorized(new { message = "Invalid or expired code." });
 
+            
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null) return Unauthorized(new { message = "User not found." });
 
+           
             var roles = await _userManager.GetRolesAsync(user);
             var token = GenerateToken(user, roles);
 
+            
             _login2FACodes.Remove(model.Email);
 
+            // Capture the user's IP and User-Agent
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+            var userAgent = Request.Headers["User-Agent"].ToString();
+
+           
+            var deviceFingerprint = $"{ipAddress}_{userAgent}";
+
+            // Deserialize known devices from user profile
+            List<string> knownDevices = new();
+            if (!string.IsNullOrEmpty(user.KnownDevicesJson))
+            {
+                knownDevices = System.Text.Json.JsonSerializer.Deserialize<List<string>>(user.KnownDevicesJson);
+            }
+
+            // Check if this is a new device
+            bool isNewDevice = !knownDevices.Contains(deviceFingerprint);
+
+            if (isNewDevice)
+            {
+                // Add new device to known devices
+                knownDevices.Add(deviceFingerprint);
+                user.KnownDevicesJson = System.Text.Json.JsonSerializer.Serialize(knownDevices);
+                await _userManager.UpdateAsync(user);
+
+                var emailBody = $@"
+            <p>New login detected on your account.</p>
+            <p><strong>IP Address:</strong> {ipAddress}</p>
+            <p><strong>Device:</strong> {userAgent}</p>
+            <p><strong>Time (UTC):</strong> {DateTime.UtcNow.ToString("dd MMM yyyy HH:mm")} UTC</p>
+            <p>If this wasn't you, please <a href='http://localhost:5173/forgot-password'>reset your password immediately</a>.</p>";
+
+                await _emailService.SendEmailAsync(user.Email, "Security Alert: New Device Login", emailBody);
+            }
+
+            // Save login activity to database for history
+            var loginLog = new LoginActivity
+            {
+                UserId = user.Id,
+                IPAddress = ipAddress,
+                UserAgent = userAgent,
+                LoginTime = DateTime.UtcNow
+            };
+
+            _context.LoginActivities.Add(loginLog);
+            await _context.SaveChangesAsync();
+
+           
             return Ok(new
             {
                 token,
-                expiration = DateTime.UtcNow.AddDays(2),
+                expiration = DateTime.UtcNow.AddMinutes(10), 
                 roles,
-                user
+                user = new
+                {
+                    user.Id,
+                    user.FullName,
+                    user.Email,
+                    user.ProfilePictureUrl
+                }
             });
         }
 
-        //EMAIL CONFIRMATION 
+        [Authorize]
+        [HttpGet("known-devices")]
+        public async Task<IActionResult> GetKnownDevices()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            List<string> knownDevices = new();
+            if (!string.IsNullOrEmpty(user.KnownDevicesJson))
+            {
+                knownDevices = System.Text.Json.JsonSerializer.Deserialize<List<string>>(user.KnownDevicesJson);
+            }
+
+            return Ok(new { devices = knownDevices });
+        }
+
+        [Authorize]
+        [HttpPost("remove-device")]
+        public async Task<IActionResult> RemoveKnownDevice([FromBody] RemoveDeviceDto model)
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var user = await _userManager.FindByIdAsync(userId);
+
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            List<string> knownDevices = new();
+            if (!string.IsNullOrEmpty(user.KnownDevicesJson))
+            {
+                knownDevices = System.Text.Json.JsonSerializer.Deserialize<List<string>>(user.KnownDevicesJson);
+            }
+
+            if (knownDevices.Contains(model.DeviceFingerprint))
+            {
+                knownDevices.Remove(model.DeviceFingerprint);
+                user.KnownDevicesJson = System.Text.Json.JsonSerializer.Serialize(knownDevices);
+                await _userManager.UpdateAsync(user);
+
+                return Ok(new { message = "Device removed successfully." });
+            }
+
+            return BadRequest(new { message = "Device not found." });
+        }
 
         [HttpPost("confirm-email")]
         public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailDto model)
@@ -266,123 +365,12 @@ namespace RRealEstateApi.Controllers
             var body = $"<p>Click to verify your email: <a href='{link}'>Confirm Email</a></p>";
             await _emailService.SendEmailAsync(user.Email, "Confirm Your Email", body);
         }
-        private async Task SendEmail2fa(ApplicationUser user,string code)
-        {
 
-            
-            //var link = $"{_config["Frontend:ConfirmEmailUrl"]}http://localhost:5173/confirm-email?email={user.Email}&token={encoded}";
+        private async Task SendEmail2fa(ApplicationUser user, string code)
+        {
             var body = $"<p>Your 2FA code is : <strong>{code}</strong></p>";
-            await _emailService.SendEmailAsync(user.Email, "Confirm Your Email", body);
+            await _emailService.SendEmailAsync(user.Email, "Your 2FA Code", body);
         }
-
-        // PASSWORD 
-
-        [HttpPost("forgot-password")]
-        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
-        {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null) return BadRequest(new { message = "User not found." });
-
-            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var encodedToken = System.Web.HttpUtility.UrlEncode(token);
-
-            //  Access the value from your config
-            var resetUrl = _config["http://localhost:5173/forgot-password/create-new-password"];
-            //var link = $"{resetUrl}?email={model.Email}&token={encodedToken}";
-            var link = $"{resetUrl}";
-
-            // Send the email
-            await _emailService.SendEmailAsync(model.Email, "Reset Password", $@"
-        <p>Click below to reset your password:</p>
-        <p><a href='http://localhost:5173/forgot-password/create-new-password'>Reset Password</a></p>
-        <p>If the link doesn't work, copy and paste this in your browser:</p>
-        <p>http://localhost:5173/forgot-password/create-new-password</p>
-    ");
-
-            return Ok(new { message = "Reset link sent." });
-        }
-
-        [HttpPost("update-change-password")]
-        public async Task<IActionResult> ManualPasswordUpdate([FromBody] UpdateChangePasswordDto model)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null)
-                return NotFound(new { message = "User not found." });
-
-            // Hash new password manually
-            var hashedPassword = _userManager.PasswordHasher.HashPassword(user, model.NewPassword);
-
-            // Update the password hash directly
-            user.PasswordHash = hashedPassword;
-
-            var result = await _userManager.UpdateAsync(user);
-            if (!result.Succeeded)
-                return BadRequest(new { message = "Password update failed.", errors = result.Errors });
-
-            return Ok(new { message = "Password updated successfully." });
-        }
-
-
-        [HttpDelete("delete-account")]
-        [Authorize]
-        public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto model)
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-                return Unauthorized(new { message = "User not found or already deleted." });
-
-            var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
-            if (!isPasswordValid)
-                return BadRequest(new { message = "Invalid password." });
-
-            var email = user.Email;
-            var fullName = user.FullName;
-
-            try
-            {
-                // With cascade delete configured, just delete the user
-                var result = await _userManager.DeleteAsync(user);
-                if (!result.Succeeded)
-                {
-                    return StatusCode(500, new { message = "Failed to delete account.", errors = result.Errors });
-                }
-
-                // Email notification
-                var subject = "Account Deleted";
-                var body = $@"
-            <p>Dear {fullName},</p>
-            <p>Your account associated with this email <strong>{email}</strong> has been deleted successfully.</p>
-            <p>If this wasn't you or you have any questions, please contact our support team.</p>
-            <br/>
-            <p>Thank you,<br/>The Real Estate Team</p>";
-
-                await _emailService.SendEmailAsync(email, subject, body);
-
-                return Ok(new { message = "Account deleted and email notification sent." });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while deleting the account.", error = ex.Message });
-            }
-        }
-
-        [HttpPost("reset-password")]
-        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
-        {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null) return BadRequest(new { message = "User not found." });
-
-            var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
-            if (!result.Succeeded)
-                return BadRequest(new { message = "Reset failed.", errors = result.Errors });
-
-            return Ok(new { message = "Password reset." });
-        }
-
-        // HELPERS 
 
         private string GenerateToken(ApplicationUser user, IList<string> roles)
         {
@@ -403,7 +391,7 @@ namespace RRealEstateApi.Controllers
                 issuer: _config["Jwt:Issuer"],
                 audience: _config["Jwt:Audience"],
                 claims: claims,
-                expires: DateTime.UtcNow.AddDays(2),
+                expires: DateTime.UtcNow.AddMinutes(10),
                 signingCredentials: creds
             );
 

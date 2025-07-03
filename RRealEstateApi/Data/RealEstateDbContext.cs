@@ -20,6 +20,7 @@ namespace RRealEstateApi.Data
         public DbSet<WatchlistItem> WatchlistItems { get; set; }
         public DbSet<Notification> Notifications { get; set; }
         public DbSet<PropertyImage> PropertyImages { get; set; }
+        public DbSet<LoginActivity> LoginActivities { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
