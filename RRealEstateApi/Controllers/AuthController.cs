@@ -372,6 +372,118 @@ namespace RRealEstateApi.Controllers
             await _emailService.SendEmailAsync(user.Email, "Your 2FA Code", body);
         }
 
+        // PASSWORD 
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null) return BadRequest(new { message = "User not found." });
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            var encodedToken = System.Web.HttpUtility.UrlEncode(token);
+
+            //  Access the value from your config
+            var resetUrl = _config["http://localhost:5173/forgot-password/create-new-password"];
+            //var link = $"{resetUrl}?email={model.Email}&token={encodedToken}";
+            var link = $"{resetUrl}";
+
+            // Send the email
+            await _emailService.SendEmailAsync(model.Email, "Reset Password", $@"
+        <p>Click below to reset your password:</p>
+        <p><a href='http://localhost:5173/forgot-password/create-new-password'>Reset Password</a></p>
+        <p>If the link doesn't work, copy and paste this in your browser:</p>
+        <p>http://localhost:5173/forgot-password/create-new-password</p>
+    ");
+
+            return Ok(new { message = "Reset link sent." });
+        }
+
+        [HttpPost("update-change-password")]
+        public async Task<IActionResult> ManualPasswordUpdate([FromBody] UpdateChangePasswordDto model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                return NotFound(new { message = "User not found." });
+
+            // Hash new password manually
+            var hashedPassword = _userManager.PasswordHasher.HashPassword(user, model.NewPassword);
+
+            // Update the password hash directly
+            user.PasswordHash = hashedPassword;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                return BadRequest(new { message = "Password update failed.", errors = result.Errors });
+
+            return Ok(new { message = "Password updated successfully." });
+        }
+
+
+        [HttpDelete("delete-account")]
+        [Authorize]
+        public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { message = "User not found or already deleted." });
+
+            var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
+            if (!isPasswordValid)
+                return BadRequest(new { message = "Invalid password." });
+
+            var email = user.Email;
+            var fullName = user.FullName;
+
+            try
+            {
+                // With cascade delete configured, just delete the user
+                var result = await _userManager.DeleteAsync(user);
+                if (!result.Succeeded)
+                {
+                    return StatusCode(500, new { message = "Failed to delete account.", errors = result.Errors });
+                }
+
+                // Email notification
+                var subject = "Account Deleted";
+                var body = $@"
+            <p>Dear {fullName},</p>
+            <p>Your account associated with this email <strong>{email}</strong> has been deleted successfully.</p>
+            <p>If this wasn't you or you have any questions, please contact our support team.</p>
+            <br/>
+            <p>Thank you,<br/>The Real Estate Team</p>";
+
+                await _emailService.SendEmailAsync(email, subject, body);
+
+                return Ok(new { message = "Account deleted and email notification sent." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred while deleting the account.", error = ex.Message });
+            }
+        }
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null)
+                return BadRequest(new { message = "User not found." });
+
+            // This method checks the old password and sets the new one
+            var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
+
+            if (!result.Succeeded)
+                return BadRequest(new { message = "Reset failed.", errors = result.Errors });
+
+            return Ok(new { message = "Password changed successfully." });
+        }
+
+
+        // HELPERS 
+
         private string GenerateToken(ApplicationUser user, IList<string> roles)
         {
             var claims = new List<Claim>
