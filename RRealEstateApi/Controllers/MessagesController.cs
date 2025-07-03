@@ -47,7 +47,7 @@ public class MessagesController : ControllerBase
         if (agent == null) return NotFound("Agent not found");
 
         var messagesQuery = _context.Messages
-            .Where(m => m.UserId == agent.Id)
+            .Where(m => m.RecieverEmail == agent.Email)
             .Include(m => m.User)
             .OrderByDescending(m => m.DateSent); 
 
@@ -59,10 +59,10 @@ public class MessagesController : ControllerBase
 
         return Ok(new
         {
-            TotalCount = totalCount,
-            PageNumber = pageNumber,
-            PageSize = pageSize,
-            Data = messages
+            totalCount,
+            pageNumber,
+            pageSize,
+            data = messages
         });
     }
 
