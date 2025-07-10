@@ -4,7 +4,7 @@
 
 namespace RealEstateApi.Migrations
 {
-    public partial class inittttt3333 : Migration
+    public partial class initcreate : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

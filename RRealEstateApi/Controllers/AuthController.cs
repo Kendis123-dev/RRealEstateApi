@@ -207,81 +207,101 @@ namespace RRealEstateApi.Controllers
         [HttpPost("verify-2fa")]
         public async Task<IActionResult> Verify2FA([FromBody] TwoFactorDto model)
         {
-            // Check if the provided 2FA code matches the stored code
-            if (!_login2FACodes.TryGetValue(model.Email, out var code) || code != model.Code)
-                return Unauthorized(new { message = "Invalid or expired code." });
-
-            
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null) return Unauthorized(new { message = "User not found." });
-
-           
-            var roles = await _userManager.GetRolesAsync(user);
-            var token = GenerateToken(user, roles);
-
-            
-            _login2FACodes.Remove(model.Email);
-
-            // Capture the user's IP and User-Agent
-            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
-            var userAgent = Request.Headers["User-Agent"].ToString();
-
-           
-            var deviceFingerprint = $"{ipAddress}_{userAgent}";
-
-            // Deserialize known devices from user profile
-            List<string> knownDevices = new();
-            if (!string.IsNullOrEmpty(user.KnownDevicesJson))
+            try
             {
-                knownDevices = System.Text.Json.JsonSerializer.Deserialize<List<string>>(user.KnownDevicesJson);
-            }
+                // Validate input
+                if (string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Code))
+                    return BadRequest(new { message = "Email and code are required." });
 
-            // Check if this is a new device
-            bool isNewDevice = !knownDevices.Contains(deviceFingerprint);
+                // Check if the 2FA code exists and matches
+                if (!_login2FACodes.TryGetValue(model.Email, out var code))
+                    return Unauthorized(new { message = "Code not found or expired." });
 
-            if (isNewDevice)
-            {
-                // Add new device to known devices
-                knownDevices.Add(deviceFingerprint);
-                user.KnownDevicesJson = System.Text.Json.JsonSerializer.Serialize(knownDevices);
-                await _userManager.UpdateAsync(user);
+                if (code != model.Code)
+                    return Unauthorized(new { message = "Invalid code." });
 
-                var emailBody = $@"
-            <p>New login detected on your account.</p>
-            <p><strong>IP Address:</strong> {ipAddress}</p>
-            <p><strong>Device:</strong> {userAgent}</p>
-            <p><strong>Time (UTC):</strong> {DateTime.UtcNow.ToString("dd MMM yyyy HH:mm")} UTC</p>
-            <p>If this wasn't you, please <a href='http://localhost:5173/forgot-password'>reset your password immediately</a>.</p>";
+                var user = await _userManager.FindByEmailAsync(model.Email);
+                if (user == null)
+                    return Unauthorized(new { message = "User not found." });
 
-                await _emailService.SendEmailAsync(user.Email, "Security Alert: New Device Login", emailBody);
-            }
+                var roles = await _userManager.GetRolesAsync(user);
+                var token = GenerateToken(user, roles);
 
-            // Save login activity to database for history
-            var loginLog = new LoginActivity
-            {
-                UserId = user.Id,
-                IPAddress = ipAddress,
-                UserAgent = userAgent,
-                LoginTime = DateTime.UtcNow
-            };
+                // Remove the used 2FA code
+                _login2FACodes.Remove(model.Email);
 
-            _context.LoginActivities.Add(loginLog);
-            await _context.SaveChangesAsync();
+                // Capture device fingerprint
+                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
+                var userAgent = Request.Headers["User-Agent"].ToString();
+                var deviceFingerprint = $"{ipAddress}_{userAgent}";
 
-           
-            return Ok(new
-            {
-                token,
-                expiration = DateTime.UtcNow.AddMinutes(10), 
-                roles,
-                user = new
+                // Check known devices
+                List<string> knownDevices = new();
+                if (!string.IsNullOrEmpty(user.KnownDevicesJson))
                 {
-                    user.Id,
-                    user.FullName,
-                    user.Email,
-                    user.ProfilePictureUrl
+                    try
+                    {
+                        knownDevices = System.Text.Json.JsonSerializer.Deserialize<List<string>>(user.KnownDevicesJson);
+                    }
+                    catch
+                    {
+                        // fallback in case of bad JSON
+                        knownDevices = new List<string>();
+                    }
                 }
-            });
+
+                bool isNewDevice = !knownDevices.Contains(deviceFingerprint);
+
+                if (isNewDevice)
+                {
+                    knownDevices.Add(deviceFingerprint);
+                    user.KnownDevicesJson = System.Text.Json.JsonSerializer.Serialize(knownDevices);
+                    await _userManager.UpdateAsync(user);
+
+                    var emailBody = $@"
+         <p>New login detected on your account.</p>
+         <p><strong>IP Address:</strong> {ipAddress}</p>
+         <p><strong>Device:</strong> {userAgent}</p>
+         <p><strong>Time (UTC):</strong> {DateTime.UtcNow:dd MMM yyyy HH:mm} UTC</p>
+         <p>If this wasn't you, please <a href='http://localhost:5173/forgot-password'>reset your password immediately</a>.</p>";
+
+                    await _emailService.SendEmailAsync(user.Email, "Security Alert: New Device Login", emailBody);
+                }
+
+                // Log activity
+                var loginLog = new LoginActivity
+                {
+                    UserId = user.Id,
+                    IPAddress = ipAddress,
+                    UserAgent = userAgent,
+                    LoginTime = DateTime.UtcNow
+                };
+
+                _context.LoginActivities.Add(loginLog);
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    token,
+                    expiration = DateTime.UtcNow.AddMinutes(10),
+                    roles,
+                    user = new
+                    {
+                        user.Id,
+                        user.FullName,
+                        user.Email,
+                        user.ProfilePictureUrl
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred during 2FA verification.",
+                    error = ex.Message
+                });
+            }
         }
 
         [Authorize]
