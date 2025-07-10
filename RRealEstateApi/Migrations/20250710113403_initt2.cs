@@ -2,9 +2,9 @@
 
 #nullable disable
 
-namespace RealEstateApi.Migrations
+namespace RRealEstateApi.Migrations
 {
-    public partial class initcreate : Migration
+    public partial class initt2 : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {

@@ -8,7 +8,7 @@ using RRealEstateApi.Data;
 
 #nullable disable
 
-namespace RealEstateApi.Migrations
+namespace RRealEstateApi.Migrations
 {
     [DbContext(typeof(RealEstateDbContext))]
     partial class RealEstateDbContextModelSnapshot : ModelSnapshot
