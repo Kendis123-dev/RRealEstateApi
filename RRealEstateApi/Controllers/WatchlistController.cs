@@ -19,7 +19,7 @@ namespace RRealEstateApi.Controllers
         }
 
         [HttpPost("add")]
-        public async Task<IActionResult> AddToWatchlist(string email, [FromBody] AddToWatchlistDto dto)
+        public async Task<IActionResult> AddToWatchlist([FromQuery] string email, [FromBody] AddToWatchlistDto dto)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
@@ -92,7 +92,7 @@ namespace RRealEstateApi.Controllers
         }
 
         [HttpDelete("remove")]
-        public async Task<IActionResult> RemoveFromWatchlist(string email, int propertyId)
+        public async Task<IActionResult> RemoveFromWatchlist([FromQuery] string email, [FromQuery] int propertyId)
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)
