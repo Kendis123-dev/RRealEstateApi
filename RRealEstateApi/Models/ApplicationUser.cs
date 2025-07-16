@@ -6,7 +6,7 @@ namespace RRealEstateApi.Models
     {
        
         public string UserEmail { get; set; }
-        
+        public bool IsDisabled { get; set; } = false;
         public string FullName { get; set; }
         public string ProfilePictureUrl { get; set; } = "{}";
         public string KnownDevicesJson { get; set; } = "{}";

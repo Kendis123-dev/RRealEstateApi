@@ -40,8 +40,8 @@ namespace RRealEstateApi.Controllers
         {
             _env = env;
             _userManager = userManager;
-            _context = context;
             _roleManager = roleManager;
+            _context = context;
             _config = config;
             _emailService = emailService;
             _phoneService = phoneService;
@@ -51,18 +51,17 @@ namespace RRealEstateApi.Controllers
         public async Task<IActionResult> RegisterAdmin([FromBody] RegisterDto model)
         {
             if (!IsValidEmail(model.Email)) return BadRequest(new { message = "Invalid email format" });
-
             if (await _userManager.FindByEmailAsync(model.Email) != null)
                 return BadRequest(new { message = "Admin already exists." });
 
             var user = new ApplicationUser
             {
                 UserName = model.Email,
-                UserEmail = model.Email,
                 Email = model.Email,
                 FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
-                EmailConfirmed = false
+                EmailConfirmed = false,
+                IsDisabled = false
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -81,25 +80,23 @@ namespace RRealEstateApi.Controllers
         public async Task<IActionResult> RegisterUser([FromBody] RegisterDto model)
         {
             if (!IsValidEmail(model.Email)) return BadRequest(new { message = "Invalid email format" });
-
             if (await _userManager.FindByEmailAsync(model.Email) != null)
                 return BadRequest(new { message = "User already exists." });
 
             var user = new ApplicationUser
             {
                 UserName = model.Email,
-                UserEmail = model.Email,
                 Email = model.Email,
                 FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
-                EmailConfirmed = false
+                EmailConfirmed = false,
+                IsDisabled = false
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
             if (!result.Succeeded) return BadRequest(result.Errors);
 
             await _userManager.AddToRoleAsync(user, "User");
-
             await SendEmailConfirmationLink(user);
             return Ok(new { message = "User registered. Please confirm your email." });
         }
@@ -108,28 +105,26 @@ namespace RRealEstateApi.Controllers
         public async Task<IActionResult> RegisterAgent([FromBody] RegisterDto model)
         {
             if (!IsValidEmail(model.Email)) return BadRequest(new { message = "Invalid email format" });
-
             if (await _userManager.FindByEmailAsync(model.Email) != null)
                 return BadRequest(new { message = "Agent already exists." });
 
             var user = new ApplicationUser
             {
                 UserName = model.Email,
-                UserEmail = model.Email,
                 Email = model.Email,
                 FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
-                EmailConfirmed = false
+                EmailConfirmed = false,
+                IsDisabled = false
             };
 
             var agent = new Agent
             {
                 FullName = model.FullName,
                 Email = user.Email,
-                Aspuserid = user.Id,
                 PhoneNumber = model.PhoneNumber,
-                RegisteredAt = user.CreatedAt,
-                IsVerified = false
+                IsVerified = false,
+                RegisteredAt = DateTime.UtcNow
             };
 
             _context.Agents.Add(agent);
@@ -149,41 +144,35 @@ namespace RRealEstateApi.Controllers
             return Ok(new { message = "Agent registered. Please confirm your email." });
         }
 
-        [HttpPost("login-admin")]
-        public async Task<IActionResult> LoginAdmin([FromBody] LoginDto model)
-        {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
-                return Unauthorized(new { message = "Invalid login." });
-
-            if (!await _userManager.IsInRoleAsync(user, "Admin"))
-                return Unauthorized(new { message = "Not an admin." });
-
-            return await Begin2FA(user);
-        }
-
         [HttpPost("login-user")]
         public async Task<IActionResult> LoginUser([FromBody] LoginDto model)
         {
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
-                return Unauthorized(new { message = "Invalid login." });
+            return await HandleLogin(model, "User");
+        }
 
-            if (!await _userManager.IsInRoleAsync(user, "User"))
-                return Unauthorized(new { message = "Not a user." });
-
-            return await Begin2FA(user);
+        [HttpPost("login-admin")]
+        public async Task<IActionResult> LoginAdmin([FromBody] LoginDto model)
+        {
+            return await HandleLogin(model, "Admin");
         }
 
         [HttpPost("login-agent")]
         public async Task<IActionResult> LoginAgent([FromBody] LoginDto model)
         {
+            return await HandleLogin(model, "Agent");
+        }
+
+        private async Task<IActionResult> HandleLogin(LoginDto model, string role)
+        {
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
                 return Unauthorized(new { message = "Invalid credentials." });
 
-            if (!await _userManager.IsInRoleAsync(user, "Agent"))
-                return Unauthorized(new { message = "Not an agent." });
+            if (user.IsDisabled)
+                return Unauthorized(new { message = "Account has been disabled." });
+
+            if (!await _userManager.IsInRoleAsync(user, role))
+                return Unauthorized(new { message = $"Not a {role.ToLower()}." });
 
             return await Begin2FA(user);
         }
@@ -200,155 +189,36 @@ namespace RRealEstateApi.Controllers
             _login2FACodes[user.Email] = code;
 
             await SendEmail2fa(user, code);
-
             return Ok(new { message = "2FA code sent to your phone." });
         }
 
         [HttpPost("verify-2fa")]
         public async Task<IActionResult> Verify2FA([FromBody] TwoFactorDto model)
         {
-            try
+            if (!_login2FACodes.TryGetValue(model.Email, out var code) || code != model.Code)
+                return Unauthorized(new { message = "Invalid or expired code." });
+
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null) return Unauthorized(new { message = "User not found." });
+
+            _login2FACodes.Remove(model.Email);
+
+            var roles = await _userManager.GetRolesAsync(user);
+            var token = GenerateToken(user, roles);
+
+            return Ok(new
             {
-                // Validate input
-                if (string.IsNullOrWhiteSpace(model.Email) || string.IsNullOrWhiteSpace(model.Code))
-                    return BadRequest(new { message = "Email and code are required." });
-
-                // Check if the 2FA code exists and matches
-                if (!_login2FACodes.TryGetValue(model.Email, out var code))
-                    return Unauthorized(new { message = "Code not found or expired." });
-
-                if (code != model.Code)
-                    return Unauthorized(new { message = "Invalid code." });
-
-                var user = await _userManager.FindByEmailAsync(model.Email);
-                if (user == null)
-                    return Unauthorized(new { message = "User not found." });
-
-                var roles = await _userManager.GetRolesAsync(user);
-                var token = GenerateToken(user, roles);
-
-                // Remove the used 2FA code
-                _login2FACodes.Remove(model.Email);
-
-                // Capture device fingerprint
-                var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString();
-                var userAgent = Request.Headers["User-Agent"].ToString();
-                var deviceFingerprint = $"{ipAddress}_{userAgent}";
-
-                // Check known devices
-                List<string> knownDevices = new();
-                if (!string.IsNullOrEmpty(user.KnownDevicesJson))
+                token,
+                expiration = DateTime.UtcNow.AddMinutes(10),
+                roles,
+                user = new
                 {
-                    try
-                    {
-                        knownDevices = System.Text.Json.JsonSerializer.Deserialize<List<string>>(user.KnownDevicesJson);
-                    }
-                    catch
-                    {
-                        // fallback in case of bad JSON
-                        knownDevices = new List<string>();
-                    }
+                    user.Id,
+                    user.FullName,
+                    user.Email,
+                    user.ProfilePictureUrl
                 }
-
-                bool isNewDevice = !knownDevices.Contains(deviceFingerprint);
-
-                if (isNewDevice)
-                {
-                    knownDevices.Add(deviceFingerprint);
-                    user.KnownDevicesJson = System.Text.Json.JsonSerializer.Serialize(knownDevices);
-                    await _userManager.UpdateAsync(user);
-
-                    var emailBody = $@"
-         <p>New login detected on your account.</p>
-         <p><strong>IP Address:</strong> {ipAddress}</p>
-         <p><strong>Device:</strong> {userAgent}</p>
-         <p><strong>Time (UTC):</strong> {DateTime.UtcNow:dd MMM yyyy HH:mm} UTC</p>
-         <p>If this wasn't you, please <a href='http://localhost:5173/forgot-password'>reset your password immediately</a>.</p>";
-
-                    await _emailService.SendEmailAsync(user.Email, "Security Alert: New Device Login", emailBody);
-                }
-
-                // Log activity
-                var loginLog = new LoginActivity
-                {
-                    UserId = user.Id,
-                    IPAddress = ipAddress,
-                    UserAgent = userAgent,
-                    LoginTime = DateTime.UtcNow
-                };
-
-                _context.LoginActivities.Add(loginLog);
-                await _context.SaveChangesAsync();
-
-                return Ok(new
-                {
-                    token,
-                    expiration = DateTime.UtcNow.AddMinutes(10),
-                    roles,
-                    user = new
-                    {
-                        user.Id,
-                        user.FullName,
-                        user.Email,
-                        user.ProfilePictureUrl
-                    }
-                });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new
-                {
-                    message = "An error occurred during 2FA verification.",
-                    error = ex.Message
-                });
-            }
-        }
-
-        [Authorize]
-        [HttpGet("known-devices")]
-        public async Task<IActionResult> GetKnownDevices()
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var user = await _userManager.FindByIdAsync(userId);
-
-            if (user == null)
-                return NotFound(new { message = "User not found." });
-
-            List<string> knownDevices = new();
-            if (!string.IsNullOrEmpty(user.KnownDevicesJson))
-            {
-                knownDevices = System.Text.Json.JsonSerializer.Deserialize<List<string>>(user.KnownDevicesJson);
-            }
-
-            return Ok(new { devices = knownDevices });
-        }
-
-        [Authorize]
-        [HttpPost("remove-device")]
-        public async Task<IActionResult> RemoveKnownDevice([FromBody] RemoveDeviceDto model)
-        {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var user = await _userManager.FindByIdAsync(userId);
-
-            if (user == null)
-                return NotFound(new { message = "User not found." });
-
-            List<string> knownDevices = new();
-            if (!string.IsNullOrEmpty(user.KnownDevicesJson))
-            {
-                knownDevices = System.Text.Json.JsonSerializer.Deserialize<List<string>>(user.KnownDevicesJson);
-            }
-
-            if (knownDevices.Contains(model.DeviceFingerprint))
-            {
-                knownDevices.Remove(model.DeviceFingerprint);
-                user.KnownDevicesJson = System.Text.Json.JsonSerializer.Serialize(knownDevices);
-                await _userManager.UpdateAsync(user);
-
-                return Ok(new { message = "Device removed successfully." });
-            }
-
-            return BadRequest(new { message = "Device not found." });
+            });
         }
 
         [HttpPost("confirm-email")]
@@ -368,123 +238,31 @@ namespace RRealEstateApi.Controllers
         public async Task<IActionResult> ResendConfirmation([FromBody] ResendEmailConfirmationDto model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null) return BadRequest(new { message = "User not found." });
-
-            if (user.EmailConfirmed)
-                return BadRequest(new { message = "Email already confirmed." });
+            if (user == null || user.EmailConfirmed)
+                return BadRequest(new { message = "User not found or already confirmed." });
 
             await SendEmailConfirmationLink(user);
             return Ok(new { message = "Confirmation link resent." });
         }
 
-        private async Task SendEmailConfirmationLink(ApplicationUser user)
-        {
-            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-            var encoded = WebUtility.UrlEncode(token);
-            var link = $"{_config["Frontend:ConfirmEmailUrl"]}http://localhost:5173/confirm-email?email={user.Email}&token={encoded}";
-            var body = $"<p>Click to verify your email: <a href='{link}'>Confirm Email</a></p>";
-            await _emailService.SendEmailAsync(user.Email, "Confirm Your Email", body);
-        }
-
-        private async Task SendEmail2fa(ApplicationUser user, string code)
-        {
-            var body = $"<p>Your 2FA code is : <strong>{code}</strong></p>";
-            await _emailService.SendEmailAsync(user.Email, "Your 2FA Code", body);
-        }
-
-        // PASSWORD 
-
         [HttpPost("forgot-password")]
         public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordDto model)
         {
             var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null) return BadRequest(new { message = "User not found." });
+            if (user == null)
+                return BadRequest(new { message = "User not found." });
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
-            var encodedToken = System.Web.HttpUtility.UrlEncode(token);
+            var encoded = WebUtility.UrlEncode(token);
+            var link = $"{_config["Frontend:ResetPasswordurl"]}?email={user.Email}&token={encoded}";
 
-            //  Access the value from your config
-            var resetUrl = _config["http://localhost:5173/forgot-password/create-new-password"];
-            //var link = $"{resetUrl}?email={model.Email}&token={encodedToken}";
-            var link = $"{resetUrl}";
-
-            // Send the email
-            await _emailService.SendEmailAsync(model.Email, "Reset Password", $@"
-        <p>Click below to reset your password:</p>
-        <p><a href='http://localhost:5173/forgot-password/create-new-password'>Reset Password</a></p>
-        <p>If the link doesn't work, copy and paste this in your browser:</p>
-        <p>http://localhost:5173/forgot-password/create-new-password</p>
-    ");
+            await _emailService.SendEmailAsync(user.Email, "Reset Password", $@"
+                <p>Click below to reset your password:</p>
+                <p><a href='{link}'>Reset Password</a></p>");
 
             return Ok(new { message = "Reset link sent." });
         }
 
-        [HttpPost("update-change-password")]
-        public async Task<IActionResult> ManualPasswordUpdate([FromBody] UpdateChangePasswordDto model)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
-
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null)
-                return NotFound(new { message = "User not found." });
-
-            // Hash new password manually
-            var hashedPassword = _userManager.PasswordHasher.HashPassword(user, model.NewPassword);
-
-            // Update the password hash directly
-            user.PasswordHash = hashedPassword;
-
-            var result = await _userManager.UpdateAsync(user);
-            if (!result.Succeeded)
-                return BadRequest(new { message = "Password update failed.", errors = result.Errors });
-
-            return Ok(new { message = "Password updated successfully." });
-        }
-
-
-        [HttpDelete("delete-account")]
-        [Authorize]
-        public async Task<IActionResult> DeleteAccount([FromBody] DeleteAccountDto model)
-        {
-            var user = await _userManager.GetUserAsync(User);
-            if (user == null)
-                return Unauthorized(new { message = "User not found or already deleted." });
-
-            var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
-            if (!isPasswordValid)
-                return BadRequest(new { message = "Invalid password." });
-
-            var email = user.Email;
-            var fullName = user.FullName;
-
-            try
-            {
-                // With cascade delete configured, just delete the user
-                var result = await _userManager.DeleteAsync(user);
-                if (!result.Succeeded)
-                {
-                    return StatusCode(500, new { message = "Failed to delete account.", errors = result.Errors });
-                }
-
-                // Email notification
-                var subject = "Account Deleted";
-                var body = $@"
-            <p>Dear {fullName},</p>
-            <p>Your account associated with this email <strong>{email}</strong> has been deleted successfully.</p>
-            <p>If this wasn't you or you have any questions, please contact our support team.</p>
-            <br/>
-            <p>Thank you,<br/>The Real Estate Team</p>";
-
-                await _emailService.SendEmailAsync(email, subject, body);
-
-                return Ok(new { message = "Account deleted and email notification sent." });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, new { message = "An error occurred while deleting the account.", error = ex.Message });
-            }
-        }
         [HttpPost("reset-password")]
         public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordDto model)
         {
@@ -492,24 +270,67 @@ namespace RRealEstateApi.Controllers
             if (user == null)
                 return BadRequest(new { message = "User not found." });
 
-            // This method checks the old password and sets the new one
             var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
-
             if (!result.Succeeded)
                 return BadRequest(new { message = "Reset failed.", errors = result.Errors });
 
             return Ok(new { message = "Password changed successfully." });
         }
 
+        [HttpPost("update-change-password")]
+        public async Task<IActionResult> ManualPasswordUpdate([FromBody] UpdateChangePasswordDto model)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            if (user == null) return NotFound(new { message = "User not found." });
 
-        // HELPERS 
+            var hashed = _userManager.PasswordHasher.HashPassword(user, model.NewPassword);
+            user.PasswordHash = hashed;
+
+            var result = await _userManager.UpdateAsync(user);
+            return result.Succeeded
+                ? Ok(new { message = "Password updated successfully." })
+                : BadRequest(new { message = "Update failed.", errors = result.Errors });
+        }
+
+        [HttpDelete("disable-account")]
+        [Authorize]
+        public async Task<IActionResult> DisableAccount([FromBody] DisableAccountDto model)
+        {
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null)
+                return Unauthorized(new { message = "User not found." });
+
+            var valid = await _userManager.CheckPasswordAsync(user, model.Password);
+            if (!valid)
+                return BadRequest(new { message = "Invalid password." });
+
+            user.IsDisabled = true;
+            await _userManager.UpdateAsync(user);
+
+            await _emailService.SendEmailAsync(user.Email, "Account Disabled", $@"
+                <p>Your account has been permanently disabled.</p>");
+
+            return Ok(new { message = "Account disabled successfully." });
+        }
+
+        private async Task SendEmailConfirmationLink(ApplicationUser user)
+        {
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+            var link = $"{_config["Frontend:ConfirmEmailUrl"]}?email={user.Email}&token={WebUtility.UrlEncode(token)}";
+            await _emailService.SendEmailAsync(user.Email, "Confirm Your Email", $"<p>Click to verify your email: <a href='{link}'>Confirm Email</a></p>");
+        }
+
+        private async Task SendEmail2fa(ApplicationUser user, string code)
+        {
+            var body = $"<p>Your 2FA code is: <strong>{code}</strong></p>";
+            await _emailService.SendEmailAsync(user.Email, "Your 2FA Code", body);
+        }
 
         private string GenerateToken(ApplicationUser user, IList<string> roles)
         {
             var claims = new List<Claim>
             {
                 new Claim(ClaimTypes.NameIdentifier, user.Id),
-                new Claim(ClaimTypes.Name, user.UserName),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 

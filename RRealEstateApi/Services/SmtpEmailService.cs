@@ -15,7 +15,7 @@ public class SmtpEmailService : IEmailService
 
     public async Task SendEmailAsync(string toEmail, string subject, string body)
     {
-        var smtpServer = _configuration["EmailSettings:SmtpServer"];
+        var smtpServer = _configuration["EmailSettings:SmtpHost"];
         var port = int.Parse(_configuration["EmailSettings:Port"]);
         var senderName = _configuration["EmailSettings:SenderName"];
         var senderEmail = _configuration["EmailSettings:SenderEmail"];
