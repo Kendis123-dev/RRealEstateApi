@@ -18,8 +18,10 @@ namespace RRealEstateApi.Controllers
             _context = context;
         }
 
+        
         [HttpPost("add")]
         public async Task<IActionResult> AddToWatchlist([FromQuery] string email, [FromBody] AddToWatchlistDto dto)
+
         {
             var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
             if (user == null)

@@ -9,11 +9,11 @@ using RRealEstateApi.Data;
 
 #nullable disable
 
-namespace RealEstateApi.Migrations
+namespace RRealEstateApi.Migrations
 {
     [DbContext(typeof(RealEstateDbContext))]
-    [Migration("20250529093959_CreatedAt")]
-    partial class CreatedAt
+    [Migration("20250710112245_initt")]
+    partial class initt
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -193,7 +193,7 @@ namespace RealEstateApi.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
 
-                    b.Property<string>("AgencyName")
+                    b.Property<string>("Aspuserid")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -207,10 +207,6 @@ namespace RealEstateApi.Migrations
 
                     b.Property<bool>("IsVerified")
                         .HasColumnType("bit");
-
-                    b.Property<string>("Password")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PhoneNumber")
                         .IsRequired()
@@ -253,6 +249,10 @@ namespace RealEstateApi.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("KnownDevicesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
 
@@ -276,6 +276,10 @@ namespace RealEstateApi.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
+                    b.Property<string>("ProfilePictureUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
 
@@ -289,10 +293,6 @@ namespace RealEstateApi.Migrations
                     b.Property<string>("UserName")
                         .HasMaxLength(256)
                         .HasColumnType("nvarchar(256)");
-
-                    b.Property<string>("userID")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -344,6 +344,36 @@ namespace RealEstateApi.Migrations
                     b.ToTable("Listings");
                 });
 
+            modelBuilder.Entity("RRealEstateApi.Models.LoginActivity", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<string>("IPAddress")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("LoginTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("UserAgent")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("LoginActivities");
+                });
+
             modelBuilder.Entity("RRealEstateApi.Models.Message", b =>
                 {
                     b.Property<int>("Id")
@@ -360,6 +390,14 @@ namespace RealEstateApi.Migrations
 
                     b.Property<int>("PropertyId")
                         .HasColumnType("int");
+
+                    b.Property<string>("RecieverEmail")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RecieverId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("UserId")
                         .IsRequired()
@@ -447,6 +485,10 @@ namespace RealEstateApi.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -456,6 +498,43 @@ namespace RealEstateApi.Migrations
                     b.HasIndex("AgentId");
 
                     b.ToTable("Properties");
+                });
+
+            modelBuilder.Entity("RRealEstateApi.Models.PropertyImage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FileUrl")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<byte[]>("ImageData")
+                        .IsRequired()
+                        .HasColumnType("varbinary(max)");
+
+                    b.Property<int>("PropertyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PropertyId");
+
+                    b.ToTable("PropertyImages");
                 });
 
             modelBuilder.Entity("RRealEstateApi.Models.Transaction", b =>
@@ -582,6 +661,17 @@ namespace RealEstateApi.Migrations
                     b.Navigation("Property");
                 });
 
+            modelBuilder.Entity("RRealEstateApi.Models.LoginActivity", b =>
+                {
+                    b.HasOne("RRealEstateApi.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("RRealEstateApi.Models.Message", b =>
                 {
                     b.HasOne("RRealEstateApi.Models.Property", "Property")
@@ -593,7 +683,7 @@ namespace RealEstateApi.Migrations
                     b.HasOne("RRealEstateApi.Models.ApplicationUser", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Property");
@@ -619,6 +709,17 @@ namespace RealEstateApi.Migrations
                         .HasForeignKey("AgentId");
 
                     b.Navigation("Agent");
+                });
+
+            modelBuilder.Entity("RRealEstateApi.Models.PropertyImage", b =>
+                {
+                    b.HasOne("RRealEstateApi.Models.Property", "Property")
+                        .WithMany()
+                        .HasForeignKey("PropertyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Property");
                 });
 
             modelBuilder.Entity("RRealEstateApi.Models.Transaction", b =>

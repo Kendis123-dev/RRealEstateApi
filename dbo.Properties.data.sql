@@ -1,4 +1,5 @@
 ﻿SET IDENTITY_INSERT [dbo].[Properties] ON
+<<<<<<< HEAD
 INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (2, N'Oceanview Apartment', N'Peak conditions', N'Ikota', CAST(300000000.00 AS Decimal(18, 2)), N'/uploads/41cfa5be-c0fc-40f4-a8f7-9472cd54c508.jpg', N'Mansion', N'Luxury', N'2025-05-23 09:29:53', 0, 1006, N'Lagos')
 INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (3, N'Serene 3-Bedroom Flat', N'Spacious and fully tiled', N'Lekki Phase 1', CAST(250000000.00 AS Decimal(18, 2)), N'/uploads/32732703-4363-4345-947b-f17f1931b3ef.jpg', N'Flat', N'Midrange', N'2025-05-24 10:15:00', 0, 1006, N'Lagos')
 INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (4, N'Cozy Bungalow', N'Perfect for small families', N'Abeokuta', CAST(180000000.00 AS Decimal(18, 2)), N'/uploads/875b6ece-bafc-4328-970a-0713d0039163.jpg', N'Bungalow', N'Affordable', N'2025-05-25 11:00:00', 0, 1006, N'Ogun')
@@ -9,4 +10,51 @@ INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price
 INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (9, N'Luxury Penthouse', N'Scenic views with rooftop access', N'Victoria Island', CAST(5000000.00 AS Decimal(18, 2)), N'/uploads/a0c8212b-e6d0-459f-91fe-aff6186cdc74.jpg', N'Penthouse', N'Luxury', N'2025-05-28 16:30:00', 0, 1006, N'Lagos')
 INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (10, N'1-Bedroom Apartment', N'Simple and secure', N'Mowe', CAST(800000.00 AS Decimal(18, 2)), N'/uploads/e0dd5aac-447c-4401-a50e-40b041966eb8.jpg', N'Apartment', N'Affordable', N'2025-05-29 11:45:00', 0, 1006, N'Ogun')
 INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (11, N'Fully Detached Duplex', N'Fenced with ample parking space', N'Sangotedo', CAST(2700000.00 AS Decimal(18, 2)), N'/uploads/e8c8d072-c9a3-43d2-abc0-0be0783f6bd0.jpg', N'Duplex', N'Midrange', N'2025-05-30 14:20:00', 0, 1006, N'Lagos')
+=======
+<<<<<<< HEAD
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (2, N'Oceanview Apartment', N'Peak conditions', N'Ikota', CAST(300000000.00 AS Decimal(18, 2)), N'/uploads/41cfa5be-c0fc-40f4-a8f7-9472cd54c508.jpg', N'Mansion', N'Luxury', N'2025-05-23 09:29:53', 0, 6, N'Lagos')
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (3, N'Serene 3-Bedroom Flat', N'Spacious and fully tiled', N'Lekki Phase 1', CAST(250000000.00 AS Decimal(18, 2)), N'/uploads/32732703-4363-4345-947b-f17f1931b3ef.jpg', N'Flat', N'Midrange', N'2025-05-24 10:15:00', 0, 1, N'Lagos')
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (4, N'Cozy Bungalow', N'Perfect for small families', N'Abeokuta', CAST(180000000.00 AS Decimal(18, 2)), N'/uploads/875b6ece-bafc-4328-970a-0713d0039163.jpg', N'Bungalow', N'Affordable', N'2025-05-25 11:00:00', 0, 6, N'Ogun')
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (5, N'Modern Duplex', N'Fully serviced with standby generator', N'Gwarinpa', CAST(350000000.00 AS Decimal(18, 2)), N'/uploads/db2a7606-4379-4d37-b1ff-d98e5cc738f9.jpg', N'Duplex', N'Luxury', N'2025-05-25 15:45:00', 0, 1, N'Abuja')
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (6, N'Student Lodge', N'Close to university campus', N'Ife', CAST(5000000.00 AS Decimal(18, 2)), N'/uploads/843853b0-a518-4be0-a931-b15374501526.jpg', N'Self Contain', N'Affordable', N'2025-05-26 08:20:00', 0, 1, N'Osun')
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (7, N'4-Bedroom Detached House', N'Newly built with pop ceiling', N'Asaba', CAST(2200000.00 AS Decimal(18, 2)), N'/uploads/effd996b-51fe-4c55-94e8-92672ef97cd3.jpeg', N'Detached', N'Midrange', N'2025-05-27 13:30:00', 0, 6, N'Delta')
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (8, N'Skyline Mini Flat', N'Great for working professionals', N'Yaba', CAST(1200000.00 AS Decimal(18, 2)), N'/uploads/d73765af-a340-488f-bf14-7d49e3f59d6b.jpeg', N'Mini Flat', N'Midrange', N'2025-05-28 09:00:00', 0, 1, N'Lagos')
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (9, N'Luxury Penthouse', N'Scenic views with rooftop access', N'Victoria Island', CAST(5000000.00 AS Decimal(18, 2)), N'/uploads/a0c8212b-e6d0-459f-91fe-aff6186cdc74.jpg', N'Penthouse', N'Luxury', N'2025-05-28 16:30:00', 0, 6, N'Lagos')
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (10, N'1-Bedroom Apartment', N'Simple and secure', N'Mowe', CAST(800000.00 AS Decimal(18, 2)), N'/uploads/e0dd5aac-447c-4401-a50e-40b041966eb8.jpg', N'Apartment', N'Affordable', N'2025-05-29 11:45:00', 0, 1, N'Ogun')
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) VALUES (11, N'Fully Detached Duplex', N'Fenced with ample parking space', N'Sangotedo', CAST(2700000.00 AS Decimal(18, 2)), N'/uploads/e8c8d072-c9a3-43d2-abc0-0be0783f6bd0.jpg', N'Duplex', N'Midrange', N'2025-05-30 14:20:00', 0, 6, N'Lagos')
 SET IDENTITY_INSERT [dbo].[Properties] OFF
+=======
+
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) 
+VALUES (2, N'Oceanview Apartment', N'Peak conditions', N'Ikota', CAST(300000000.00 AS Decimal(18, 2)), N'/uploads/41cfa5be-c0fc-40f4-a8f7-9472cd54c508.jpg', N'Mansion', N'Luxury', N'2025-05-23 09:29:53', 0, 1006, N'Lagos');
+
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) 
+VALUES (3, N'Serene 3-Bedroom Flat', N'Spacious and fully tiled', N'Lekki Phase 1', CAST(250000000.00 AS Decimal(18, 2)), N'/uploads/32732703-4363-4345-947b-f17f1931b3ef.jpg', N'Flat', N'Midrange', N'2025-05-24 10:15:00', 0, 1006, N'Lagos');
+
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) 
+VALUES (4, N'Cozy Bungalow', N'Perfect for small families', N'Abeokuta', CAST(180000000.00 AS Decimal(18, 2)), N'/uploads/875b6ece-bafc-4328-970a-0713d0039163.jpg', N'Bungalow', N'Affordable', N'2025-05-25 11:00:00', 0, 1006, N'Ogun');
+
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) 
+VALUES (5, N'Modern Duplex', N'Fully serviced with standby generator', N'Gwarinpa', CAST(350000000.00 AS Decimal(18, 2)), N'/uploads/db2a7606-4379-4d37-b1ff-d98e5cc738f9.jpg', N'Duplex', N'Luxury', N'2025-05-25 15:45:00', 0, 1006, N'Abuja');
+
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) 
+VALUES (6, N'Student Lodge', N'Close to university campus', N'Ife', CAST(5000000.00 AS Decimal(18, 2)), N'/uploads/843853b0-a518-4be0-a931-b15374501526.jpg', N'Self Contain', N'Affordable', N'2025-05-26 08:20:00', 0, 1006, N'Osun');
+
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) 
+VALUES (7, N'4-Bedroom Detached House', N'Newly built with pop ceiling', N'Asaba', CAST(2200000.00 AS Decimal(18, 2)), N'/uploads/effd996b-51fe-4c55-94e8-92672ef97cd3.jpeg', N'Detached', N'Midrange', N'2025-05-27 13:30:00', 0, 1006, N'Delta');
+
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) 
+VALUES (8, N'Skyline Mini Flat', N'Great for working professionals', N'Yaba', CAST(1200000.00 AS Decimal(18, 2)), N'/uploads/d73765af-a340-488f-bf14-7d49e3f59d6b.jpeg', N'Mini Flat', N'Midrange', N'2025-05-28 09:00:00', 0, 1006, N'Lagos');
+
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) 
+VALUES (9, N'Luxury Penthouse', N'Scenic views with rooftop access', N'Victoria Island', CAST(5000000.00 AS Decimal(18, 2)), N'/uploads/a0c8212b-e6d0-459f-91fe-aff6186cdc74.jpg', N'Penthouse', N'Luxury', N'2025-05-28 16:30:00', 0, 1006, N'Lagos');
+
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) 
+VALUES (10, N'1-Bedroom Apartment', N'Simple and secure', N'Mowe', CAST(800000.00 AS Decimal(18, 2)), N'/uploads/e0dd5aac-447c-4401-a50e-40b041966eb8.jpg', N'Apartment', N'Affordable', N'2025-05-29 11:45:00', 0, 1006, N'Ogun');
+
+INSERT INTO [dbo].[Properties] ([Id], [Title], [Description], [Location], [Price], [ImageUrl], [PropertyType], [PropertyValue], [DatePosted], [ListingId], [AgentId], [State]) 
+VALUES (11, N'Fully Detached Duplex', N'Fenced with ample parking space', N'Sangotedo', CAST(2700000.00 AS Decimal(18, 2)), N'/uploads/e8c8d072-c9a3-43d2-abc0-0be0783f6bd0.jpg', N'Duplex', N'Midrange', N'2025-05-30 14:20:00', 0, 1006, N'Lagos');
+
+>>>>>>> d6c7427caef6dbb488a4cdd18e1ec4f393658f02
+SET IDENTITY_INSERT [dbo].[Properties] OFF
+>>>>>>> ca2108b5be3ca7ec3400ae259475828d649a6c88
