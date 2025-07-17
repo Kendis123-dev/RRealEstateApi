@@ -12,8 +12,8 @@ using RRealEstateApi.Data;
 namespace RRealEstateApi.Migrations
 {
     [DbContext(typeof(RealEstateDbContext))]
-    [Migration("20250710112245_initt")]
-    partial class initt
+    [Migration("20250716155134_Intitiitt")]
+    partial class Intitiitt
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
@@ -248,6 +248,9 @@ namespace RRealEstateApi.Migrations
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDisabled")
+                        .HasColumnType("bit");
 
                     b.Property<string>("KnownDevicesJson")
                         .IsRequired()
