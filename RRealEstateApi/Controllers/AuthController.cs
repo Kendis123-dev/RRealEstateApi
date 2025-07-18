@@ -79,27 +79,36 @@ namespace RRealEstateApi.Controllers
         [HttpPost("register-user")]
         public async Task<IActionResult> RegisterUser([FromBody] RegisterDto model)
         {
-            if (!IsValidEmail(model.Email)) return BadRequest(new { message = "Invalid email format" });
-            if (await _userManager.FindByEmailAsync(model.Email) != null)
-                return BadRequest(new { message = "User already exists." });
-
-            var user = new ApplicationUser
+            try
             {
-                UserName = model.Email,
-                Email = model.Email,
-                FullName = model.FullName,
-                PhoneNumber = model.PhoneNumber,
-                EmailConfirmed = false,
-                IsDisabled = false
-            };
+                if (!IsValidEmail(model.Email)) return BadRequest(new { message = "Invalid email format" });
+                if (await _userManager.FindByEmailAsync(model.Email) != null)
+                    return BadRequest(new { message = "User already exists." });
 
-            var result = await _userManager.CreateAsync(user, model.Password);
-            if (!result.Succeeded) return BadRequest(result.Errors);
+                var user = new ApplicationUser
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    FullName = model.FullName,
+                    PhoneNumber = model.PhoneNumber,
+                    EmailConfirmed = false,
+                    IsDisabled = false
+                };
 
-            await _userManager.AddToRoleAsync(user, "User");
-            await SendEmailConfirmationLink(user);
-            return Ok(new { message = "User registered. Please confirm your email." });
+                var result = await _userManager.CreateAsync(user, model.Password);
+                if (!result.Succeeded) return BadRequest(result.Errors);
+
+                await _userManager.AddToRoleAsync(user, "User");
+                await SendEmailConfirmationLink(user);
+
+                return Ok(new { message = "User registered. Please confirm your email." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Server error", details = ex.Message });
+            }
         }
+
 
         [HttpPost("register-agent")]
         public async Task<IActionResult> RegisterAgent([FromBody] RegisterDto model)
