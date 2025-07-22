@@ -54,14 +54,15 @@ namespace RRealEstateApi.Controllers
             if (await _userManager.FindByEmailAsync(model.Email) != null)
                 return BadRequest(new { message = "Admin already exists." });
 
-            var user = new ApplicationUser
+            ApplicationUser user = new ApplicationUser
             {
                 UserName = model.Email,
                 Email = model.Email,
                 FullName = model.FullName,
                 PhoneNumber = model.PhoneNumber,
                 EmailConfirmed = false,
-                IsDisabled = false
+                IsDisabled = false,
+                UserEmail=model.Email,
             };
 
             var result = await _userManager.CreateAsync(user, model.Password);
@@ -92,7 +93,9 @@ namespace RRealEstateApi.Controllers
                     FullName = model.FullName,
                     PhoneNumber = model.PhoneNumber,
                     EmailConfirmed = false,
-                    IsDisabled = false
+                    IsDisabled = false,
+                    UserEmail=model.Email
+
                 };
 
                 var result = await _userManager.CreateAsync(user, model.Password);
@@ -110,48 +113,103 @@ namespace RRealEstateApi.Controllers
         }
 
 
+        //[HttpPost("register-agent")]
+        //public async Task<IActionResult> RegisterAgent([FromBody] RegisterDto model)
+        //{
+        //    if (!IsValidEmail(model.Email)) return BadRequest(new { message = "Invalid email format" });
+        //    if (await _userManager.FindByEmailAsync(model.Email) != null)
+        //        return BadRequest(new { message = "Agent already exists." });
+
+        //    var user = new ApplicationUser
+        //    {
+        //        UserName = model.Email,
+        //        Email = model.Email,
+        //        FullName = model.FullName,
+        //        PhoneNumber = model.PhoneNumber,
+        //        EmailConfirmed = false,
+        //        IsDisabled = false
+        //    };
+
+        //    var agent = new Agent
+        //    {
+        //        FullName = model.FullName,
+        //        Email = user.Email,
+        //        PhoneNumber = model.PhoneNumber,
+        //        IsVerified = false,
+        //        RegisteredAt = DateTime.UtcNow
+        //    };
+
+        //    _context.Agents.Add(agent);
+        //    await _context.SaveChangesAsync();
+
+        //    user.AgentId = agent.Id;
+
+        //    var result = await _userManager.CreateAsync(user, model.Password);
+        //    if (!result.Succeeded) return BadRequest(result.Errors);
+
+        //    if (!await _roleManager.RoleExistsAsync("Agent"))
+        //        await _roleManager.CreateAsync(new IdentityRole("Agent"));
+
+        //    await _userManager.AddToRoleAsync(user, "Agent");
+
+        //    await SendEmailConfirmationLink(user);
+        //    return Ok(new { message = "Agent registered. Please confirm your email." });
+        //}
+
+
         [HttpPost("register-agent")]
         public async Task<IActionResult> RegisterAgent([FromBody] RegisterDto model)
         {
-            if (!IsValidEmail(model.Email)) return BadRequest(new { message = "Invalid email format" });
-            if (await _userManager.FindByEmailAsync(model.Email) != null)
-                return BadRequest(new { message = "Agent already exists." });
-
-            var user = new ApplicationUser
+            try
             {
-                UserName = model.Email,
-                Email = model.Email,
-                FullName = model.FullName,
-                PhoneNumber = model.PhoneNumber,
-                EmailConfirmed = false,
-                IsDisabled = false
-            };
+                if (!IsValidEmail(model.Email))
+                    return BadRequest(new { message = "Invalid email format" });
 
-            var agent = new Agent
+                if (await _userManager.FindByEmailAsync(model.Email) != null)
+                    return BadRequest(new { message = "Agent already exists." });
+
+                var user = new ApplicationUser
+                {
+                    UserName = model.Email,
+                    Email = model.Email,
+                    FullName = model.FullName,
+                    PhoneNumber = model.PhoneNumber,
+                    EmailConfirmed = false,
+                    IsDisabled = false,
+                    UserEmail = model.Email
+                };
+                var result = await _userManager.CreateAsync(user, model.Password);
+                var agent = new Agent
+                {
+                    FullName = model.FullName,
+                    Email = user.Email,
+                    PhoneNumber = model.PhoneNumber,
+                    IsVerified = false,
+                    RegisteredAt = DateTime.UtcNow,
+                   
+
+                };
+                user.AgentId = agent.Id;
+                _context.Agents.Add(agent);
+                await _context.SaveChangesAsync();
+                
+                if (!result.Succeeded) return BadRequest(result.Errors);
+
+                if (!await _roleManager.RoleExistsAsync("Agent"))
+                    await _roleManager.CreateAsync(new IdentityRole("Agent"));
+
+                await _userManager.AddToRoleAsync(user, "Agent");
+
+                await SendEmailConfirmationLink(user);
+                return Ok(new { message = "Agent registered. Please confirm your email." });
+            }
+            catch (Exception ex)
             {
-                FullName = model.FullName,
-                Email = user.Email,
-                PhoneNumber = model.PhoneNumber,
-                IsVerified = false,
-                RegisteredAt = DateTime.UtcNow
-            };
-
-            _context.Agents.Add(agent);
-            await _context.SaveChangesAsync();
-
-            user.AgentId = agent.Id;
-
-            var result = await _userManager.CreateAsync(user, model.Password);
-            if (!result.Succeeded) return BadRequest(result.Errors);
-
-            if (!await _roleManager.RoleExistsAsync("Agent"))
-                await _roleManager.CreateAsync(new IdentityRole("Agent"));
-
-            await _userManager.AddToRoleAsync(user, "Agent");
-
-            await SendEmailConfirmationLink(user);
-            return Ok(new { message = "Agent registered. Please confirm your email." });
+                return StatusCode(500, new { message = "Server error", error = ex.Message, stack = ex.StackTrace });
+            }
         }
+
+
 
         [HttpPost("login-user")]
         public async Task<IActionResult> LoginUser([FromBody] LoginDto model)

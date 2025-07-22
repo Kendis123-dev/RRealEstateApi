@@ -22,9 +22,20 @@ try
         options.UseSqlServer(constring));
 
     // 2. Configure Identity
-    builder.Services.AddIdentity<ApplicationUser, IdentityRole>()
+    builder.Services.AddIdentity<ApplicationUser, ApplicationRole>()
         .AddEntityFrameworkStores<RealEstateDbContext>()
         .AddDefaultTokenProviders();
+
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("AllowAll", policy =>
+        {
+            policy
+                .AllowAnyOrigin()
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        });
+    });
 
     // 3. Configure JWT Authentication
     var jwtSettings = configuration.GetSection("Jwt");
@@ -131,8 +142,8 @@ try
     // 8. Middleware
     app.UseSwagger();
     app.UseSwaggerUI();
-
-    app.UseCors(x => x.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
+    app.UseCors("AllowAll");
+    // app.UseCors(x => x.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod());
     app.UseHttpsRedirection();
     app.UseStaticFiles();
     app.UseRouting();

@@ -16,5 +16,6 @@ namespace RRealEstateApi.Models
         [NotMapped]
         public object Role { get; set; }
         public DateTime CreatedAt { get; set; }
+        public virtual ICollection<IdentityUserRole<string>> UserRoles { get; set; } 
     }
 }

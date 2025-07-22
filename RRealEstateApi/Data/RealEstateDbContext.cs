@@ -5,7 +5,7 @@ using RRealEstateApi.Models;
 
 namespace RRealEstateApi.Data
 {
-    public class RealEstateDbContext : IdentityDbContext<ApplicationUser>
+    public class RealEstateDbContext : IdentityDbContext<ApplicationUser, ApplicationRole, String>
     {
         public RealEstateDbContext(DbContextOptions<RealEstateDbContext> options)
             : base(options)
@@ -83,6 +83,13 @@ namespace RRealEstateApi.Data
                 .WithMany()
                 .HasForeignKey(l => l.PropertyId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<ApplicationUser>()
+                .HasOne(u => u.Agent)
+                .WithMany(a => a.Users)
+                .HasForeignKey(u => u.AgentId)
+                .OnDelete(DeleteBehavior.SetNull); // or .Cascade if you want agent deletion to delete users
+
         }
     }
 }
