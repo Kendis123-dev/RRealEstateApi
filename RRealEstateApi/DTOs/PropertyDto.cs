@@ -12,7 +12,7 @@
         public string PropertyType { get; set; }
         public string PropertyValue { get; set; } = string.Empty;
         public DateTime DatePosted { get; set; }
-        public int AgentId { get; set; }
+        public int? AgentId { get; set; }
 
     }
 }

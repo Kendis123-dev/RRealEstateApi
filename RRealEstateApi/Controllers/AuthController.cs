@@ -51,7 +51,8 @@ namespace RRealEstateApi.Controllers
         public async Task<IActionResult> RegisterAdmin([FromBody] RegisterDto model)
         {
             if (!IsValidEmail(model.Email)) return BadRequest(new { message = "Invalid email format" });
-            if (await _userManager.FindByEmailAsync(model.Email) != null)
+            var eResult = await _userManager.FindByEmailAsync(model.Email);
+            if (eResult != null)
                 return BadRequest(new { message = "Admin already exists." });
 
             ApplicationUser user = new ApplicationUser

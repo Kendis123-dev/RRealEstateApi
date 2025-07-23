@@ -5,7 +5,7 @@ namespace RRealEstateApi.Models
     public class Agent
     {
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int Id { get; set; }
+        public int? Id { get; set; }
 
         public string Aspuserid{get;set;}
         public string FullName { get; set; }

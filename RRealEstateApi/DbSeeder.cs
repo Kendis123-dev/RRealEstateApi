@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using RRealEstateApi.Models;
 
 namespace RRealEstateApi
 {
@@ -8,14 +9,18 @@ namespace RRealEstateApi
         {
             var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
 
-            string[] roles = { "Admin", "Agent", "User" };
+            var roles = new List<IdentityRole>
+            {
+                new IdentityRole { Name = "Admin", NormalizedName = "ADMIN" },
+                new IdentityRole { Name = "Agent", NormalizedName = "AGENT"} ,
+                new IdentityRole { Name = "User", NormalizedName = "USER"} 
+            };
 
             foreach (var role in roles)
             {
-                if (!await roleManager.RoleExistsAsync(role))
+                if (!await roleManager.RoleExistsAsync(role.Name))
                 {
-                    await roleManager.CreateAsync(new IdentityRole(role));
-
+                    await roleManager.CreateAsync(role);
                 }
             }
         }

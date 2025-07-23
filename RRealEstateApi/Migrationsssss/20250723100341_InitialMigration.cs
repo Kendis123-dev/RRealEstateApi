@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace RRealEstateApi.Migrations
 {
-    public partial class Intitiitt : Migration
+    public partial class InitialMigration : Migration
     {
         protected override void Up(MigrationBuilder migrationBuilder)
         {
@@ -32,6 +32,7 @@ namespace RRealEstateApi.Migrations
                 columns: table => new
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Name = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true)
@@ -51,7 +52,7 @@ namespace RRealEstateApi.Migrations
                     FullName = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     ProfilePictureUrl = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     KnownDevicesJson = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    AgentId = table.Column<int>(type: "int", nullable: true),
+                    AgentId = table.Column<int>(type: "int", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -71,11 +72,12 @@ namespace RRealEstateApi.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_AspNetUsers_Agents_AgentId",
-                        column: x => x.AgentId,
-                        principalTable: "Agents",
-                        principalColumn: "Id");
+                    //table.ForeignKey(
+                    //    /name: "FK_AspNetUsers_Agents_AgentId",
+                    //    column: x => x.AgentId,
+                    //    principalTable: "Agents",
+                    //    principalColumn: "Id",
+                    //    onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -99,11 +101,11 @@ namespace RRealEstateApi.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Properties", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_Properties_Agents_AgentId",
-                        column: x => x.AgentId,
-                        principalTable: "Agents",
-                        principalColumn: "Id");
+                    //table.ForeignKey(
+                    //    name: "FK_Properties_Agents_AgentId",
+                    //    column: x => x.AgentId,
+                    //    principalTable: "Agents",
+                    //    principalColumn: "Id");
                 });
 
             migrationBuilder.CreateTable(
@@ -173,7 +175,8 @@ namespace RRealEstateApi.Migrations
                 columns: table => new
                 {
                     UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false)
+                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ApplicationUserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -184,6 +187,11 @@ namespace RRealEstateApi.Migrations
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_AspNetUserRoles_AspNetUsers_ApplicationUserId",
+                        column: x => x.ApplicationUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_AspNetUserRoles_AspNetUsers_UserId",
                         column: x => x.UserId,
@@ -412,6 +420,11 @@ namespace RRealEstateApi.Migrations
                 name: "IX_AspNetUserLogins_UserId",
                 table: "AspNetUserLogins",
                 column: "UserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUserRoles_ApplicationUserId",
+                table: "AspNetUserRoles",
+                column: "ApplicationUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetUserRoles_RoleId",

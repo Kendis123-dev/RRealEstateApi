@@ -31,7 +31,8 @@ public class MessagesController : ControllerBase
             UserId = user.Id,
             PropertyId = property.Id,
             content = dto.Content,
-            Agent= property.Agent.Id
+            Agent= property.Agent.Id ?? 0, // Assuming Agent is an int ID
+
         };
 
         _context.Messages.Add(message);

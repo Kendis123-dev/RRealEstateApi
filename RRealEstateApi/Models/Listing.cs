@@ -13,10 +13,10 @@ namespace RRealEstateApi.Models
         public DateTime ListedAt { get; set; }
 
         //[NotMapped]
-        public Property Property { get; internal set; }
-        public string Title { get; internal set; }
-        public string Description { get; internal set; }
-        public decimal Price { get; internal set; }
-        public bool IsAvailable { get; internal set; }
+        public Property Property { get;  set; }
+        public string Title { get;  set; }
+        public string Description { get;  set; }
+        public decimal? Price { get;  set; }
+        public bool IsAvailable { get;  set; }
     }
 }
